@@ -43,6 +43,13 @@ export type Quote = {
   created_at: string
 }
 
+export type BookFinish = {
+  id: string
+  book_id: string
+  user_id: string
+  finished_at: string
+}
+
 export type PickerRotation = {
   id: number
   member_order: string[]

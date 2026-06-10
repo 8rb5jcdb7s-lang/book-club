@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import Avatar from '@/components/Avatar'
 import StatsCards from '@/components/StatsCards'
+import WordCountCard from '@/components/WordCountCard'
 import {
   totalPagesRead,
   totalDaysReading,
+  totalWordsThisYear,
   averagePace,
   longestShortestBooks,
   fastestSlowestReads,
@@ -39,6 +41,7 @@ export default async function StatsPage() {
   const disagreements = biggestDisagreement(b, rn)
   const genres = genreBreakdown(b)
   const quotesWithContext = quoteWall(q, b, p)
+  const totalWords = totalWordsThisYear(b)
 
   return (
     <div className="space-y-8">
@@ -52,6 +55,8 @@ export default async function StatsPage() {
           { label: 'Books finished', value: readingStreak(b).toString() },
         ]}
       />
+
+      <WordCountCard totalWords={totalWords} />
 
       <div className="grid gap-6 sm:grid-cols-2">
         <section>

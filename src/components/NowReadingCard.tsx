@@ -3,13 +3,23 @@ import Link from 'next/link'
 import { requiredPace } from '@/lib/pace'
 import PagesReadForm from '@/components/PagesReadForm'
 import DeleteBookButton from '@/components/DeleteBookButton'
+import Avatar from '@/components/Avatar'
+import FinishButton from '@/components/FinishButton'
 import type { Book } from '@/lib/types'
+
+type Finisher = {
+  user_id: string
+  finished_at: string
+  profile: { display_name: string; avatar_url: string | null }
+}
 
 type Props = {
   book: (Book & { picker?: { display_name: string } | null }) | null
+  finishers?: Finisher[]
+  currentUserId?: string | null
 }
 
-export default function NowReadingCard({ book }: Props) {
+export default function NowReadingCard({ book, finishers = [], currentUserId = null }: Props) {
   if (!book) {
     return (
       <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm text-center">
@@ -73,6 +83,33 @@ export default function NowReadingCard({ book }: Props) {
           pagesReadSoFar={book.pages_read_so_far}
           pageCount={book.page_count}
         />
+
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          {currentUserId && (
+            <FinishButton
+              bookId={book.id}
+              isFinished={finishers.some((f) => f.user_id === currentUserId)}
+            />
+          )}
+          {finishers.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-stone-500">Ready to discuss:</span>
+              <div className="flex -space-x-2">
+                {finishers.map((f) => (
+                  <Avatar
+                    key={f.user_id}
+                    name={f.profile.display_name}
+                    url={f.profile.avatar_url}
+                    size={6}
+                    tooltip={`${f.profile.display_name} — finished ${new Date(
+                      f.finished_at
+                    ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

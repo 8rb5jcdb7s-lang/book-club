@@ -90,6 +90,40 @@ export async function createBook(
   redirect('/books')
 }
 
+export async function addToWantToRead(
+  _prevState: BookFormState,
+  formData: FormData
+): Promise<BookFormState> {
+  const supabase = await createClient()
+
+  const title = (formData.get('title') as string)?.trim()
+  if (!title) return { error: 'Title is required.' }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const result = await lookupBook(title)
+
+  const { error } = await supabase.from('books').insert({
+    title: result?.title ?? title,
+    author: result?.author ?? null,
+    cover_url: result?.coverUrl ?? null,
+    genre: result?.genre ?? null,
+    open_library_id: result?.openLibraryId ?? null,
+    page_count: result?.pageCount ?? null,
+    status: 'queued',
+    picked_by: user.id,
+    pages_read_so_far: 0,
+  })
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/want-to-read')
+  return undefined
+}
+
 export async function updatePagesRead(bookId: string, pages: number) {
   const supabase = await createClient()
   await supabase.from('books').update({ pages_read_so_far: pages }).eq('id', bookId)
@@ -101,6 +135,7 @@ export async function deleteBook(bookId: string) {
   await supabase.from('books').delete().eq('id', bookId)
   revalidatePath('/')
   revalidatePath('/books')
+  revalidatePath('/want-to-read')
   revalidatePath('/stats')
 }
 
@@ -148,32 +183,7 @@ export async function updateBook(
 
   revalidatePath('/')
   revalidatePath('/books')
+  revalidatePath('/want-to-read')
   revalidatePath(`/books/${bookId}`)
   redirect(`/books/${bookId}`)
-}
-
-export async function refreshAllTitles() {
-  const supabase = await createClient()
-
-  const { data: books } = await supabase.from('books').select('id, title, author, genre')
-
-  for (const book of books ?? []) {
-    const query = book.author ? `${book.title} ${book.author}` : book.title
-    const result = await lookupBook(query)
-    if (!result) continue
-
-    const updates: Record<string, string | null> = {}
-    if (result.title && result.title.toLowerCase() !== book.title.toLowerCase()) {
-      updates.title = result.title
-    }
-    // Always overwrite genre with the freshly-derived value (even null), to
-    // force-replace any stale/incorrect values from old lookups.
-    updates.genre = result.genre
-
-    await supabase.from('books').update(updates).eq('id', book.id)
-  }
-
-  revalidatePath('/')
-  revalidatePath('/books')
-  revalidatePath('/stats')
 }

@@ -83,8 +83,17 @@ export default async function BookDetailPage({
               </span>
             )}
             {averageRating !== null && (
-              <span className="font-medium text-stone-900">
+              <span className="group relative font-medium text-stone-900">
                 Avg rating: {averageRating.toFixed(1)}/10
+                <div className="pointer-events-none absolute bottom-full left-0 z-10 mb-1 hidden min-w-max flex-col gap-0.5 rounded bg-stone-900 px-2 py-1 text-xs font-normal text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:flex group-hover:opacity-100">
+                  {ratingsNotes
+                    ?.filter((rn) => rn.rating !== null)
+                    .map((rn) => (
+                      <span key={rn.id}>
+                        {rn.profile?.display_name ?? 'Unknown'}: {rn.rating}/10
+                      </span>
+                    ))}
+                </div>
               </span>
             )}
           </div>

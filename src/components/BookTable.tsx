@@ -19,9 +19,11 @@ function scoreColor(rating: number): string {
 export default function BookTable({
   books,
   averageRatings,
+  ratingBreakdowns,
 }: {
   books: BookRow[]
   averageRatings?: Map<string, number>
+  ratingBreakdowns?: Map<string, { name: string; rating: number }[]>
 }) {
   if (books.length === 0) {
     return <p className="text-sm text-stone-500">No books here yet.</p>
@@ -82,11 +84,22 @@ export default function BookTable({
                 </td>
                 <td className="px-4 py-3">
                   {avgRating !== undefined ? (
-                    <div
-                      className="flex aspect-square w-10 shrink-0 items-center justify-center rounded-full border-2 border-stone-900 text-sm font-bold text-stone-900"
-                      style={{ backgroundColor: scoreColor(avgRating) }}
-                    >
-                      {avgRating.toFixed(1)}
+                    <div className="group relative inline-flex">
+                      <div
+                        className="flex aspect-square w-10 shrink-0 items-center justify-center rounded-full border-2 border-stone-900 text-sm font-bold text-stone-900"
+                        style={{ backgroundColor: scoreColor(avgRating) }}
+                      >
+                        {avgRating.toFixed(1)}
+                      </div>
+                      {(ratingBreakdowns?.get(book.id)?.length ?? 0) > 0 && (
+                        <div className="pointer-events-none absolute bottom-full left-0 z-10 mb-1 hidden min-w-max flex-col gap-0.5 rounded bg-stone-900 px-2 py-1 text-xs font-normal text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:flex group-hover:opacity-100">
+                          {ratingBreakdowns!.get(book.id)!.map((r, i) => (
+                            <span key={i}>
+                              {r.name}: {r.rating}/10
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <span className="text-stone-600">—</span>

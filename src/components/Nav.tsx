@@ -19,7 +19,7 @@ export default async function Nav() {
 
   return (
     <header className="border-b border-stone-200 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <NavLinks />
         <div className="flex items-center gap-3">
           {profile && (

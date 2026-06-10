@@ -1,4 +1,5 @@
 import { daysTaken, historicalPace } from './pace'
+import { WORDS_PER_PAGE } from './wordCount'
 import type { Book, Profile, Quote, RatingNote } from './types'
 
 function finished(books: Book[]): Book[] {
@@ -13,6 +14,23 @@ export function totalPagesRead(books: Book[]): number {
 
 export function totalDaysReading(books: Book[]): number {
   return finished(books).reduce((sum, b) => sum + (daysTaken(b) ?? 0), 0)
+}
+
+export function totalWordsThisYear(books: Book[]): number {
+  const year = new Date().getFullYear()
+  let pages = 0
+
+  for (const book of books) {
+    if (book.status === 'finished' && book.date_finished) {
+      if (new Date(book.date_finished).getFullYear() === year) {
+        pages += book.page_count ?? 0
+      }
+    } else if (book.status === 'reading') {
+      pages += book.pages_read_so_far
+    }
+  }
+
+  return pages * WORDS_PER_PAGE
 }
 
 export function averagePace(books: Book[]): number | null {
