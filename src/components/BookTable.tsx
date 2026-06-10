@@ -1,9 +1,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import Avatar from '@/components/Avatar'
 import { daysTaken, historicalPace } from '@/lib/pace'
 import type { Book } from '@/lib/types'
 
-export type BookRow = Book & { picker?: { display_name: string } | null }
+export type BookRow = Book & {
+  picker?: { display_name: string; avatar_url: string | null } | null
+}
 
 // Interpolates from red (low score) to green (high score) on a 1-10 scale.
 function scoreColor(rating: number): string {
@@ -90,7 +93,18 @@ export default function BookTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-stone-600">
-                  {book.picker?.display_name ?? '—'}
+                  {book.picker ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar
+                        name={book.picker.display_name}
+                        url={book.picker.avatar_url}
+                        size={6}
+                      />
+                      {book.picker.display_name}
+                    </div>
+                  ) : (
+                    '—'
+                  )}
                 </td>
               </tr>
             )

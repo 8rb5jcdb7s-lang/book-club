@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import Avatar from '@/components/Avatar'
 import StatsCards from '@/components/StatsCards'
 import {
   totalPagesRead,
@@ -86,7 +87,8 @@ export default async function StatsPage() {
           ) : (
             <ul className="space-y-1 text-sm text-stone-700">
               {pickers.map((p) => (
-                <li key={p.profile.id}>
+                <li key={p.profile.id} className="flex items-center gap-2">
+                  <Avatar name={p.profile.display_name} url={p.profile.avatar_url} size={6} />
                   {p.profile.display_name}: {p.averageRating.toFixed(1)}/10 avg (
                   {p.bookCount} {p.bookCount === 1 ? 'book' : 'books'} picked)
                 </li>
@@ -102,7 +104,8 @@ export default async function StatsPage() {
           ) : (
             <ul className="space-y-1 text-sm text-stone-700">
               {raters.map((r) => (
-                <li key={r.profile.id}>
+                <li key={r.profile.id} className="flex items-center gap-2">
+                  <Avatar name={r.profile.display_name} url={r.profile.avatar_url} size={6} />
                   {r.profile.display_name}: {r.averageRating.toFixed(1)}/10 avg (
                   {r.ratingCount} {r.ratingCount === 1 ? 'rating' : 'ratings'})
                 </li>

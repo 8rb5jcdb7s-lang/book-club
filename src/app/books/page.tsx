@@ -8,13 +8,13 @@ export default async function BooksPage() {
 
   const { data: books } = await supabase
     .from('books')
-    .select('*, picker:profiles!picked_by(display_name)')
+    .select('*, picker:profiles!picked_by(display_name, avatar_url)')
     .eq('status', 'finished')
     .order('date_finished', { ascending: false, nullsFirst: false })
 
   const { data: queued } = await supabase
     .from('books')
-    .select('*, picker:profiles!picked_by(display_name)')
+    .select('*, picker:profiles!picked_by(display_name, avatar_url)')
     .eq('status', 'queued')
     .order('created_at', { ascending: true })
 
