@@ -1,6 +1,6 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import Avatar from '@/components/Avatar'
+import BookCoverFlip from '@/components/BookCoverFlip'
 import { daysTaken, historicalPace } from '@/lib/pace'
 import type { Book } from '@/lib/types'
 
@@ -54,20 +54,13 @@ export default function BookTable({
             return (
               <tr key={book.id} className="transition-colors hover:bg-stone-50">
                 <td className="px-3 py-2">
-                  {book.cover_url ? (
-                    <div className="flex h-32 w-[5.33rem] items-center justify-center rounded-md border-2 border-stone-300 bg-stone-100 shadow-sm">
-                      <Image
-                        src={book.cover_url}
-                        alt={book.title}
-                        width={80}
-                        height={120}
-                        className="h-full w-full object-contain"
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-32 w-[5.33rem] rounded-md border-2 border-stone-300 bg-stone-100" />
-                  )}
+                  <BookCoverFlip
+                    coverUrl={book.cover_url}
+                    title={book.title}
+                    author={book.author}
+                    synopsis={book.synopsis}
+                    className="h-32 w-[5.33rem]"
+                  />
                 </td>
                 <td className="px-4 py-3 font-bold text-stone-900">
                   <Link href={`/books/${book.id}`} className="hover:underline">

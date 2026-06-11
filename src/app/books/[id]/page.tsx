@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { daysTaken, historicalPace } from '@/lib/pace'
 import RatingInput from '@/components/RatingInput'
 import NotesList from '@/components/NotesList'
 import QuoteList from '@/components/QuoteList'
+import BookCoverFlip from '@/components/BookCoverFlip'
 
 export default async function BookDetailPage({
   params,
@@ -53,13 +53,12 @@ export default async function BookDetailPage({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row">
         {book.cover_url && (
-          <Image
-            src={book.cover_url}
-            alt={book.title}
-            width={120}
-            height={180}
-            className="h-44 w-auto rounded-md border border-stone-200 object-cover"
-            unoptimized
+          <BookCoverFlip
+            coverUrl={book.cover_url}
+            title={book.title}
+            author={book.author}
+            synopsis={book.synopsis}
+            className="h-44 w-[7.33rem] shrink-0"
           />
         )}
         <div className="flex-1 space-y-1">

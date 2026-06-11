@@ -23,6 +23,9 @@ export default function BookForm({
   const [genre, setGenre] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
   const [openLibraryId, setOpenLibraryId] = useState('')
+  const [synopsis, setSynopsis] = useState('')
+  const [goodreadsId, setGoodreadsId] = useState('')
+  const [amazonAsin, setAmazonAsin] = useState('')
   const [status, setStatus] = useState<'queued' | 'reading' | 'finished'>('reading')
   const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle'
@@ -45,6 +48,9 @@ export default function BookForm({
       if (result.genre) setGenre(result.genre)
       if (result.coverUrl) setCoverUrl(result.coverUrl)
       if (result.openLibraryId) setOpenLibraryId(result.openLibraryId)
+      if (result.synopsis) setSynopsis(result.synopsis)
+      if (result.goodreadsId) setGoodreadsId(result.goodreadsId)
+      if (result.amazonAsin) setAmazonAsin(result.amazonAsin)
       setLookupStatus('done')
     } catch {
       setLookupStatus('error')
@@ -128,6 +134,19 @@ export default function BookForm({
         </div>
       </div>
       <input type="hidden" name="open_library_id" value={openLibraryId} />
+      <input type="hidden" name="goodreads_id" value={goodreadsId} />
+      <input type="hidden" name="amazon_asin" value={amazonAsin} />
+
+      <div>
+        <label className="block text-sm font-medium text-stone-700">Synopsis</label>
+        <textarea
+          name="synopsis"
+          value={synopsis}
+          onChange={(e) => setSynopsis(e.target.value)}
+          rows={4}
+          className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+        />
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-stone-700">Status</label>

@@ -1,10 +1,10 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { requiredPace } from '@/lib/pace'
 import PagesReadForm from '@/components/PagesReadForm'
 import DeleteBookButton from '@/components/DeleteBookButton'
 import Avatar from '@/components/Avatar'
 import FinishButton from '@/components/FinishButton'
+import BookCoverFlip from '@/components/BookCoverFlip'
 import type { Book } from '@/lib/types'
 
 type Finisher = {
@@ -42,13 +42,12 @@ export default function NowReadingCard({ book, finishers = [], currentUserId = n
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-stone-200 bg-white p-6 shadow-sm sm:flex-row">
       {book.cover_url && (
-        <Image
-          src={book.cover_url}
-          alt={book.title}
-          width={140}
-          height={210}
-          className="h-52 w-auto rounded-lg border-2 border-stone-300 object-cover shadow-sm"
-          unoptimized
+        <BookCoverFlip
+          coverUrl={book.cover_url}
+          title={book.title}
+          author={book.author}
+          synopsis={book.synopsis}
+          className="h-52 w-[8.67rem] shrink-0"
         />
       )}
       <div className="flex-1 space-y-2">

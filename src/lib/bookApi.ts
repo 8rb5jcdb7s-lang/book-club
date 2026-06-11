@@ -5,6 +5,9 @@ export type BookLookupResult = {
   genre: string | null
   coverUrl: string | null
   openLibraryId: string | null
+  synopsis: string | null
+  goodreadsId: string | null
+  amazonAsin: string | null
 }
 
 type OpenLibraryDoc = {
@@ -23,6 +26,7 @@ type OpenLibrarySearchResponse = {
 type OpenLibraryEdition = {
   title?: string
   languages?: { key: string }[]
+  identifiers?: { goodreads?: string[]; amazon?: string[] }
 }
 
 type OpenLibraryEditionsResponse = {
@@ -89,21 +93,52 @@ function titleCaseScore(title: string): number {
   return capitalized / words.length
 }
 
+async function getEditions(workKey: string): Promise<OpenLibraryEdition[]> {
+  const res = await fetch(`https://openlibrary.org${workKey}/editions.json?limit=50`)
+  if (!res.ok) return []
+
+  const data: OpenLibraryEditionsResponse = await res.json()
+  return data.entries ?? []
+}
+
 // Open Library's search "title" is the work's title, often in its original
 // language (e.g. the Korean title for "The Vegetarian"). Look through the
 // work's editions for one in English and use its title instead.
-async function getEnglishTitle(workKey: string): Promise<string | null> {
-  const res = await fetch(`https://openlibrary.org${workKey}/editions.json?limit=50`)
-  if (!res.ok) return null
-
-  const data: OpenLibraryEditionsResponse = await res.json()
-  const englishTitles = (data.entries ?? [])
+function getEnglishTitle(editions: OpenLibraryEdition[]): string | null {
+  const englishTitles = editions
     .filter((e) => e.languages?.some((l) => l.key === '/languages/eng') && e.title)
     .map((e) => e.title as string)
 
   if (englishTitles.length === 0) return null
 
   return englishTitles.sort((a, b) => titleCaseScore(b) - titleCaseScore(a))[0]
+}
+
+// Real Amazon ASINs (as opposed to ISBNs that Open Library sometimes lists
+// under the same "amazon" identifier field) start with a letter, e.g. "B00...".
+// Only these reliably resolve to a product page on amazon.com.
+const ASIN_FORMAT = /^B[A-Z0-9]{9}$/
+
+// Find a Goodreads book ID and an Amazon ASIN from whichever edition lists them.
+function getEditionLinks(editions: OpenLibraryEdition[]): {
+  goodreadsId: string | null
+  amazonAsin: string | null
+} {
+  let goodreadsId: string | null = null
+  let amazonAsin: string | null = null
+
+  for (const edition of editions) {
+    if (!goodreadsId && edition.identifiers?.goodreads?.[0]) {
+      goodreadsId = edition.identifiers.goodreads[0]
+    }
+    if (!amazonAsin) {
+      const asin = edition.identifiers?.amazon?.find((id) => ASIN_FORMAT.test(id))
+      if (asin) amazonAsin = asin
+    }
+    if (goodreadsId && amazonAsin) break
+  }
+
+  return { goodreadsId, amazonAsin }
 }
 
 // Open Library's search "title" is usually fine for works originally
@@ -113,6 +148,26 @@ async function getEnglishTitle(workKey: string): Promise<string | null> {
 // edition title instead.
 const NON_LATIN_SCRIPT =
   /\p{Script=Hangul}|\p{Script=Han}|\p{Script=Cyrillic}|\p{Script=Greek}|\p{Script=Arabic}|\p{Script=Hebrew}/u
+
+type OpenLibraryWork = {
+  description?: string | { value?: string }
+}
+
+async function getSynopsis(workKey: string): Promise<string | null> {
+  const res = await fetch(`https://openlibrary.org${workKey}.json`)
+  if (!res.ok) return null
+
+  const data: OpenLibraryWork = await res.json()
+  const description = data.description
+  if (!description) return null
+
+  const text = typeof description === 'string' ? description : description.value
+  if (!text) return null
+
+  // Strip Open Library's "([source][id])" attribution suffixes some
+  // descriptions end with.
+  return text.replace(/\s*\(source:.*?\)\s*$/i, '').trim()
+}
 
 export async function lookupBook(query: string): Promise<BookLookupResult | null> {
   if (!query.trim()) return null
@@ -128,10 +183,13 @@ export async function lookupBook(query: string): Promise<BookLookupResult | null
   const doc = data.docs?.[0]
   if (!doc) return null
 
+  const editions = doc.key ? await getEditions(doc.key) : []
+
   const englishTitle =
-    doc.key && doc.title && NON_LATIN_SCRIPT.test(doc.title)
-      ? await getEnglishTitle(doc.key)
-      : null
+    doc.title && NON_LATIN_SCRIPT.test(doc.title) ? getEnglishTitle(editions) : null
+
+  const synopsis = doc.key ? await getSynopsis(doc.key) : null
+  const { goodreadsId, amazonAsin } = getEditionLinks(editions)
 
   return {
     title: englishTitle ?? doc.title ?? null,
@@ -142,5 +200,8 @@ export async function lookupBook(query: string): Promise<BookLookupResult | null
       ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
       : null,
     openLibraryId: doc.key ?? null,
+    synopsis,
+    goodreadsId,
+    amazonAsin,
   }
 }

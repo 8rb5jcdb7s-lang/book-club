@@ -34,6 +34,9 @@ export async function createBook(
   const targetFinishDate = (formData.get('target_finish_date') as string) || null
   const pagesReadRaw = formData.get('pages_read_so_far') as string
   const pagesReadSoFar = pagesReadRaw ? parseInt(pagesReadRaw, 10) : 0
+  const synopsis = (formData.get('synopsis') as string) || null
+  const goodreadsId = (formData.get('goodreads_id') as string) || null
+  const amazonAsin = (formData.get('amazon_asin') as string) || null
 
   if (status === 'reading') {
     // Auto-finish whatever was previously the active book
@@ -81,6 +84,9 @@ export async function createBook(
     date_finished: dateFinished,
     target_finish_date: targetFinishDate,
     pages_read_so_far: pagesReadSoFar,
+    synopsis,
+    goodreads_id: goodreadsId,
+    amazon_asin: amazonAsin,
   })
 
   if (error) return { error: error.message }
@@ -116,6 +122,9 @@ export async function addToWantToRead(
     status: 'queued',
     picked_by: user.id,
     pages_read_so_far: 0,
+    synopsis: result?.synopsis ?? null,
+    goodreads_id: result?.goodreadsId ?? null,
+    amazon_asin: result?.amazonAsin ?? null,
   })
 
   if (error) return { error: error.message }
@@ -161,6 +170,9 @@ export async function updateBook(
   const targetFinishDate = (formData.get('target_finish_date') as string) || null
   const pagesReadRaw = formData.get('pages_read_so_far') as string
   const pagesReadSoFar = pagesReadRaw ? parseInt(pagesReadRaw, 10) : 0
+  const synopsis = (formData.get('synopsis') as string) || null
+  const goodreadsId = (formData.get('goodreads_id') as string) || null
+  const amazonAsin = (formData.get('amazon_asin') as string) || null
 
   const { error } = await supabase
     .from('books')
@@ -176,6 +188,9 @@ export async function updateBook(
       date_finished: dateFinished,
       target_finish_date: targetFinishDate,
       pages_read_so_far: pagesReadSoFar,
+      synopsis,
+      goodreads_id: goodreadsId,
+      amazon_asin: amazonAsin,
     })
     .eq('id', bookId)
 

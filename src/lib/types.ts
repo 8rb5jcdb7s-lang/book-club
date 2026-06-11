@@ -21,6 +21,9 @@ export type Book = {
   date_finished: string | null
   target_finish_date: string | null
   pages_read_so_far: number
+  synopsis: string | null
+  goodreads_id: string | null
+  amazon_asin: string | null
   created_at: string
 }
 
