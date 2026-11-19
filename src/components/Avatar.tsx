@@ -1,5 +1,23 @@
 function initials(name: string): string {
-  return name.slice(0, 2).toUpperCase()
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.trim().slice(0, 2).toUpperCase()
+}
+
+// Stable pastel per person so initials-only avatars are still tell-apart-able.
+const COLORS = [
+  'bg-amber-100 text-amber-800',
+  'bg-emerald-100 text-emerald-800',
+  'bg-sky-100 text-sky-800',
+  'bg-rose-100 text-rose-800',
+  'bg-violet-100 text-violet-800',
+  'bg-lime-100 text-lime-800',
+]
+
+function colorFor(name: string): string {
+  let hash = 0
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+  return COLORS[hash % COLORS.length]
 }
 
 export default function Avatar({
@@ -7,20 +25,25 @@ export default function Avatar({
   url,
   size = 8,
   tooltip,
+  showTooltip = true,
 }: {
   name: string
   url?: string | null
+  /** Tailwind spacing units (8 = 2rem = 32px). */
   size?: number
   tooltip?: string
+  showTooltip?: boolean
 }) {
-  const dimension = size * 4 // tailwind spacing unit -> px
-  const className = `inline-flex shrink-0 items-center justify-center rounded-full border border-stone-300 bg-stone-100 text-xs font-bold text-stone-600 overflow-hidden`
-  const style = { width: dimension, height: dimension }
+  const dimension = size * 4
+  const style = { width: dimension, height: dimension, fontSize: Math.max(9, dimension * 0.38) }
 
   return (
-    <span className="group relative inline-flex hover:z-10">
+    <span className="group/avatar relative inline-flex shrink-0 hover:z-10">
       {url ? (
-        <span className={`${className} transition-transform duration-150 group-hover:scale-125`} style={style}>
+        <span
+          className="inline-flex overflow-hidden rounded-full bg-stone-100 ring-2 ring-white"
+          style={style}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
@@ -28,18 +51,23 @@ export default function Avatar({
             width={dimension}
             height={dimension}
             className="h-full w-full object-cover"
-            loading="eager"
             decoding="async"
           />
         </span>
       ) : (
-        <span className={className} style={style}>
+        <span
+          className={`inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-white ${colorFor(name)}`}
+          style={style}
+          aria-label={name}
+        >
           {initials(name)}
         </span>
       )}
-      <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-stone-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
-        {tooltip ?? name}
-      </span>
+      {showTooltip && (
+        <span className="tooltip bottom-full left-1/2 mb-1.5 -translate-x-1/2 group-hover/avatar:opacity-100">
+          {tooltip ?? name}
+        </span>
+      )}
     </span>
   )
 }

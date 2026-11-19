@@ -1,8 +1,27 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { markFinished, unmarkFinished } from '@/lib/actions/finishes'
 
+const CONFETTI_COLORS = ['#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#a855f7', '#1c1917']
+
+type Piece = { id: number; dx: number; dy: number; rot: number; color: string }
+
+function makeConfetti(): Piece[] {
+  return Array.from({ length: 18 }, (_, i) => {
+    const angle = (i / 18) * Math.PI * 2 + Math.random() * 0.4
+    const distance = 40 + Math.random() * 50
+    return {
+      id: i,
+      dx: Math.cos(angle) * distance,
+      dy: Math.sin(angle) * distance - 20,
+      rot: Math.random() * 540 - 270,
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    }
+  })
+}
+
+/** Per-member "I've finished reading" toggle for the current book. */
 export default function FinishButton({
   bookId,
   isFinished,
@@ -11,28 +30,49 @@ export default function FinishButton({
   isFinished: boolean
 }) {
   const [isPending, startTransition] = useTransition()
+  const [confetti, setConfetti] = useState<Piece[]>([])
 
-  if (isFinished) {
-    return (
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={() => startTransition(() => unmarkFinished(bookId))}
-        className="rounded-lg border-2 border-stone-300 px-4 py-2 text-sm font-bold text-stone-700 shadow-sm hover:bg-stone-100 hover:shadow-md active:scale-95 transition-all disabled:opacity-50"
-      >
-        {isPending ? 'Updating...' : "✓ You're done"}
-      </button>
-    )
+  function handleClick() {
+    if (!isFinished && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setConfetti(makeConfetti())
+      setTimeout(() => setConfetti([]), 900)
+    }
+    startTransition(() => (isFinished ? unmarkFinished(bookId) : markFinished(bookId)))
   }
 
   return (
-    <button
-      type="button"
-      disabled={isPending}
-      onClick={() => startTransition(() => markFinished(bookId))}
-      className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-stone-700 hover:shadow-lg active:scale-95 transition-all disabled:opacity-50"
-    >
-      {isPending ? 'Updating...' : 'I finished!'}
-    </button>
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        disabled={isPending}
+        aria-pressed={isFinished}
+        title={isFinished ? 'Click to undo' : 'Let everyone know you are ready to discuss'}
+        onClick={handleClick}
+        className={`btn ${
+          isFinished
+            ? 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+            : 'btn-primary'
+        }`}
+      >
+        {isPending ? 'Updating…' : isFinished ? '✓ You’ve finished' : 'I finished it!'}
+      </button>
+      <span className="pointer-events-none absolute top-1/2 left-1/2" aria-hidden="true">
+        {confetti.map((piece) => (
+          <span
+            key={piece.id}
+            className="absolute h-2 w-1.5 rounded-[1px]"
+            style={
+              {
+                backgroundColor: piece.color,
+                '--dx': `${piece.dx}px`,
+                '--dy': `${piece.dy}px`,
+                '--rot': `${piece.rot}deg`,
+                animation: 'confetti-burst 0.85s cubic-bezier(0.15, 0.8, 0.3, 1) forwards',
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </span>
+    </span>
   )
 }

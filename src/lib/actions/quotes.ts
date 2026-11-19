@@ -27,19 +27,17 @@ export async function addQuote(
     book_id: bookId,
     user_id: user.id,
     quote_text: quoteText,
-    page_number: pageNumber,
+    page_number: Number.isFinite(pageNumber) ? pageNumber : null,
   })
 
   if (error) return { error: error.message }
 
-  revalidatePath(`/books/${bookId}`)
-  revalidatePath('/stats')
+  revalidatePath('/', 'layout')
   return undefined
 }
 
-export async function deleteQuote(quoteId: string, bookId: string) {
+export async function deleteQuote(quoteId: string) {
   const supabase = await createClient()
   await supabase.from('quotes').delete().eq('id', quoteId)
-  revalidatePath(`/books/${bookId}`)
-  revalidatePath('/stats')
+  revalidatePath('/', 'layout')
 }

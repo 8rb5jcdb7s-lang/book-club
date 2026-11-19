@@ -33,6 +33,8 @@ export type RatingNote = {
   user_id: string
   rating: number | null
   notes: string | null
+  /** Present once supabase/migrations/add_did_not_finish.sql has been run. */
+  did_not_finish?: boolean | null
   created_at: string
   updated_at: string
 }

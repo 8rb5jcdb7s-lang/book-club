@@ -13,56 +13,75 @@ export default function PickerRotationCard({
   profiles: Profile[]
 }) {
   const profileMap = new Map(profiles.map((p) => [p.id, p]))
-  const nextPickerId = memberOrder[currentIndex]
-  const nextPicker = nextPickerId ? profileMap.get(nextPickerId) : null
+  const order = memberOrder.filter((id) => profileMap.has(id))
+  const nextPicker = profileMap.get(memberOrder[currentIndex] ?? '') ?? null
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-        Picker rotation
-      </p>
-      {nextPicker ? (
-        <div className="mt-1 flex items-center gap-2">
-          <Avatar name={nextPicker.display_name} url={nextPicker.avatar_url} size={8} />
-          <p className="text-lg font-semibold text-stone-900">
-            {nextPicker.display_name}&apos;s turn to pick next
-          </p>
+    <div className="card p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="eyebrow">Next pick</p>
+          {nextPicker ? (
+            <div className="mt-2 flex items-center gap-3">
+              <Avatar
+                name={nextPicker.display_name}
+                url={nextPicker.avatar_url}
+                size={11}
+                showTooltip={false}
+              />
+              <h2 className="text-2xl font-semibold text-stone-900">
+                {nextPicker.display_name}&apos;s turn
+              </h2>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-stone-600">
+              The pick order isn&apos;t set up yet — use “Edit order” to add everyone.
+            </p>
+          )}
         </div>
-      ) : (
-        <p className="mt-1 text-sm text-stone-600">
-          Rotation order isn&apos;t set up yet.
-        </p>
-      )}
+        <Link href="/books/new" className="btn btn-secondary">
+          Add the next book
+        </Link>
+      </div>
 
-      {memberOrder.length > 0 && (
-        <ol className="mt-3 flex flex-wrap gap-2 text-sm">
-          {memberOrder.map((id, i) => {
-            const profile = profileMap.get(id)
+      {order.length > 0 && (
+        <ol className="mt-5 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
+          {order.map((id, i) => {
+            const profile = profileMap.get(id)!
+            const isNext = id === memberOrder[currentIndex]
             return (
-              <li
-                key={id}
-                className={`flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 ${
-                  i === currentIndex
-                    ? 'bg-stone-900 text-white'
-                    : 'bg-stone-100 text-stone-600'
-                }`}
-              >
-                <Avatar name={profile?.display_name ?? '?'} url={profile?.avatar_url} size={6} />
-                {profile?.display_name ?? 'Unknown'}
+              <li key={id} className="flex items-center gap-1">
+                {i > 0 && (
+                  <span className="px-0.5 text-stone-300" aria-hidden="true">
+                    →
+                  </span>
+                )}
+                <span
+                  className={`flex items-center gap-1.5 rounded-full py-1 pr-3 pl-1 font-medium ${
+                    isNext ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'
+                  }`}
+                >
+                  <Avatar
+                    name={profile.display_name}
+                    url={profile.avatar_url}
+                    size={6}
+                    showTooltip={false}
+                  />
+                  {profile.display_name}
+                </span>
               </li>
             )
           })}
         </ol>
       )}
 
-      <Link
-        href="/books/new"
-        className="mt-4 inline-block rounded-lg border-2 border-stone-300 px-4 py-2 text-sm font-bold text-stone-700 shadow-sm hover:bg-stone-50 hover:shadow-md active:scale-95 transition-all"
-      >
-        Set the next book
-      </Link>
-
-      <PickerOrderEditor memberOrder={memberOrder} profiles={profiles} />
+      <div className="mt-3 flex flex-wrap">
+        <PickerOrderEditor
+          memberOrder={memberOrder}
+          currentIndex={currentIndex}
+          profiles={profiles}
+        />
+      </div>
     </div>
   )
 }

@@ -9,7 +9,8 @@ const HISTORY_LIMIT = Math.floor(FEATURED_QUOTES.length * 0.6)
 function pickQuote(): FeaturedQuote {
   let history: number[] = []
   try {
-    history = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+    const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
+    if (Array.isArray(parsed)) history = parsed
   } catch {
     history = []
   }
@@ -21,8 +22,11 @@ function pickQuote(): FeaturedQuote {
   }
 
   const index = candidates[Math.floor(Math.random() * candidates.length)]
-  const nextHistory = [...history, index].slice(-HISTORY_LIMIT)
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory))
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify([...history, index].slice(-HISTORY_LIMIT)))
+  } catch {
+    // Private browsing / storage disabled: just don't track repeats.
+  }
 
   return FEATURED_QUOTES[index]
 }
@@ -34,9 +38,9 @@ function renderQuote(quote: FeaturedQuote) {
   return (
     <>
       {quote.quote.slice(0, idx)}
-      <strong className="font-bold text-stone-900">
+      <mark className="rounded bg-accent-soft px-0.5 font-semibold text-stone-900 not-italic">
         {quote.quote.slice(idx, idx + quote.highlight.length)}
-      </strong>
+      </mark>
       {quote.quote.slice(idx + quote.highlight.length)}
     </>
   )
@@ -52,21 +56,42 @@ export default function QuoteOfTheDayCard() {
   }, [])
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-semibold text-stone-500">Quote</p>
-      {quote ? (
-        <>
-          <p className="mt-2 italic text-stone-800">&ldquo;{renderQuote(quote)}&rdquo;</p>
-          <p className="mt-3 text-xs text-stone-500">
-            — {quote.author}, <span className="italic">{quote.source}</span>
-          </p>
-        </>
-      ) : (
-        <div className="mt-2 space-y-2">
-          <div className="h-3 w-full animate-pulse rounded bg-stone-100" />
-          <div className="h-3 w-3/4 animate-pulse rounded bg-stone-100" />
+    <div className="card relative overflow-hidden p-5 sm:p-6">
+      <span
+        className="pointer-events-none absolute -top-4 right-3 font-serif text-8xl leading-none text-stone-100 select-none"
+        aria-hidden="true"
+      >
+        ”
+      </span>
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <p className="eyebrow">A quote for the club</p>
+          <button
+            type="button"
+            onClick={() => setQuote(pickQuote())}
+            className="btn btn-ghost btn-sm -mr-2"
+            title="Show another quote"
+          >
+            Another
+          </button>
         </div>
-      )}
+        {quote ? (
+          <figure>
+            <blockquote className="mt-3 max-h-64 overflow-y-auto font-serif text-lg leading-relaxed text-stone-700 italic">
+              “{renderQuote(quote)}”
+            </blockquote>
+            <figcaption className="mt-3 text-xs text-stone-500">
+              — {quote.author}, <cite>{quote.source}</cite>
+            </figcaption>
+          </figure>
+        ) : (
+          <div className="mt-4 space-y-2.5">
+            <div className="h-4 w-full animate-pulse rounded bg-stone-100" />
+            <div className="h-4 w-11/12 animate-pulse rounded bg-stone-100" />
+            <div className="h-4 w-2/3 animate-pulse rounded bg-stone-100" />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

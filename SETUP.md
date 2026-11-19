@@ -47,3 +47,30 @@ npm run dev
 ```
 
 Visit http://localhost:3000 and sign in.
+
+## 7. Database updates (run once each, in the Supabase SQL Editor)
+
+Features added after the initial schema live in `supabase/migrations/`. Run any you
+haven't yet:
+
+- `add_avatars.sql` — profile pictures
+- `add_book_finishes.sql` — "I finished it!" / ready to discuss
+- `add_book_synopsis.sql`, `add_book_links.sql` — synopsis and Goodreads/Amazon links
+- `add_did_not_finish.sql` — lets a member mark a book "did not finish" instead of rating it
+
+## 8. Keeping Supabase awake
+
+Free Supabase projects pause after 7 days without activity. To prevent that,
+`vercel.json` schedules a daily Vercel Cron job that calls `/api/keep-alive`, which
+runs a small query against the database. Nothing to configure — it starts working
+on the next deploy. You can check it under **Vercel > Project > Settings > Cron Jobs**,
+or by opening `https://<your-site>/api/keep-alive` (it should return `{"ok":true}`).
+
+Optional: set a `CRON_SECRET` environment variable in Vercel to stop anyone else
+from calling that URL.
+
+## 9. Time zone
+
+"Today" (for start/finish dates and the pages-per-day pace) is worked out in
+`America/Los_Angeles`. To change it, set `NEXT_PUBLIC_CLUB_TIME_ZONE` (e.g.
+`America/New_York`) in Vercel and `.env.local`.

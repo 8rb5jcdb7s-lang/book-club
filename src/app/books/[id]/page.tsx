@@ -1,11 +1,25 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { formatDate } from '@/lib/dates'
 import { daysTaken, historicalPace } from '@/lib/pace'
-import RatingInput from '@/components/RatingInput'
+import { startReading } from '@/lib/actions/books'
+import Avatar from '@/components/Avatar'
+import BookCover from '@/components/BookCover'
+import ConfirmActionButton from '@/components/ConfirmActionButton'
 import NotesList from '@/components/NotesList'
 import QuoteList from '@/components/QuoteList'
-import BookCoverFlip from '@/components/BookCoverFlip'
+import RatingInput from '@/components/RatingInput'
+import ScoreBadge from '@/components/ScoreBadge'
+
+export const metadata: Metadata = { title: 'Book' }
+
+const STATUS_LABELS = {
+  reading: { label: 'Reading now', className: 'bg-amber-100 text-amber-900' },
+  finished: { label: 'Finished', className: 'bg-emerald-100 text-emerald-900' },
+  queued: { label: 'Want to read', className: 'bg-stone-200 text-stone-700' },
+} as const
 
 export default async function BookDetailPage({
   params,
@@ -15,19 +29,23 @@ export default async function BookDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const [{ data: book }, { data: ratingsNotes }, { data: quotes }] = await Promise.all([
+  const [
+    {
+      data: { user },
+    },
+    { data: book },
+    { data: ratingsNotes },
+    { data: quotes },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
     supabase
       .from('books')
-      .select('*, picker:profiles!picked_by(display_name)')
+      .select('*, picker:profiles!picked_by(display_name, avatar_url)')
       .eq('id', id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('ratings_notes')
-      .select('*, profile:profiles!user_id(display_name)')
+      .select('*, profile:profiles!user_id(display_name, avatar_url)')
       .eq('book_id', id)
       .order('created_at', { ascending: true }),
     supabase
@@ -42,82 +60,159 @@ export default async function BookDetailPage({
   const days = daysTaken(book)
   const pace = historicalPace(book)
 
-  const myRating = ratingsNotes?.find((rn) => rn.user_id === user?.id) ?? null
-  const averageRating = ratingsNotes?.length
-    ? ratingsNotes
-        .filter((rn) => rn.rating !== null)
-        .reduce((sum, rn, _i, arr) => sum + (rn.rating ?? 0) / arr.length, 0)
+  const notes = ratingsNotes ?? []
+  const myRating = notes.find((rn) => rn.user_id === user?.id) ?? null
+  const rated = notes.filter((rn) => rn.rating !== null)
+  const dnfCount = notes.filter((rn) => rn.did_not_finish).length
+  const averageRating = rated.length
+    ? rated.reduce((sum, rn) => sum + (rn.rating ?? 0), 0) / rated.length
     : null
 
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row">
-        {book.cover_url && (
-          <BookCoverFlip
-            coverUrl={book.cover_url}
-            title={book.title}
-            author={book.author}
-            synopsis={book.synopsis}
-            className="h-44 w-[7.33rem] shrink-0"
+  const status = STATUS_LABELS[book.status as keyof typeof STATUS_LABELS]
+  const query = encodeURIComponent(`${book.title} ${book.author ?? ''}`.trim())
+  const goodreadsUrl = book.goodreads_id
+    ? `https://www.goodreads.com/book/show/${encodeURIComponent(book.goodreads_id)}`
+    : `https://www.goodreads.com/search?q=${query}`
+  const amazonUrl = book.amazon_asin
+    ? `https://www.amazon.com/dp/${encodeURIComponent(book.amazon_asin)}`
+    : `https://www.amazon.com/s?k=${query}&i=stripbooks`
+
+  const facts: { label: string; value: React.ReactNode }[] = []
+  if (book.page_count) facts.push({ label: 'Pages', value: book.page_count })
+  if (book.genre) facts.push({ label: 'Genre', value: book.genre })
+  if (book.picker) {
+    facts.push({
+      label: book.status === 'queued' ? 'Suggested by' : 'Picked by',
+      value: (
+        <span className="flex items-center gap-1.5">
+          <Avatar
+            name={book.picker.display_name}
+            url={book.picker.avatar_url}
+            size={5}
+            showTooltip={false}
           />
-        )}
-        <div className="flex-1 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <h1 className="text-3xl font-bold text-stone-900">{book.title}</h1>
-            <Link
-              href={`/books/${book.id}/edit`}
-              className="shrink-0 rounded-lg border-2 border-stone-300 px-4 py-2 text-sm font-bold text-stone-700 shadow-sm hover:bg-stone-50 hover:shadow-md active:scale-95 transition-all"
-            >
+          {book.picker.display_name}
+        </span>
+      ),
+    })
+  }
+  if (book.date_started) facts.push({ label: 'Started', value: formatDate(book.date_started) })
+  if (book.date_finished) facts.push({ label: 'Finished', value: formatDate(book.date_finished) })
+  if (days && pace) {
+    facts.push({
+      label: 'Read in',
+      value: `${days} ${days === 1 ? 'day' : 'days'} · ${pace.toFixed(1)} pg/day`,
+    })
+  }
+
+  return (
+    <div className="space-y-10">
+      <div className="card flex flex-col gap-6 p-5 sm:flex-row sm:p-6">
+        <BookCover
+          coverUrl={book.cover_url}
+          title={book.title}
+          author={book.author}
+          className="mx-auto aspect-[2/3] w-40 shrink-0 sm:mx-0 sm:w-44"
+        />
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span
+                className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.className}`}
+              >
+                {status.label}
+              </span>
+              <h1 className="mt-2 text-3xl leading-tight font-semibold text-stone-900 sm:text-4xl">
+                {book.title}
+              </h1>
+              {book.author && <p className="mt-1 text-lg text-stone-600">by {book.author}</p>}
+            </div>
+            {averageRating !== null && (
+              <div className="flex flex-col items-center gap-1">
+                <ScoreBadge
+                  rating={averageRating}
+                  size="lg"
+                  breakdown={rated.map((rn) => ({
+                    name: rn.profile?.display_name ?? 'Unknown',
+                    rating: rn.rating as number,
+                  }))}
+                />
+                <span className="text-center text-xs text-stone-500">
+                  avg of {rated.length} {rated.length === 1 ? 'rating' : 'ratings'}
+                  {dnfCount > 0 && <span className="block">{dnfCount} did not finish</span>}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {facts.length > 0 && (
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+              {facts.map((fact) => (
+                <div key={fact.label}>
+                  <dt className="text-xs font-medium tracking-wide text-stone-400 uppercase">
+                    {fact.label}
+                  </dt>
+                  <dd className="mt-0.5 font-medium text-stone-800">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {book.synopsis && (
+            <details className="group text-sm text-stone-600" open={book.synopsis.length < 400}>
+              <summary className="cursor-pointer font-medium text-stone-700 select-none hover:text-stone-900">
+                Synopsis
+              </summary>
+              <p className="mt-2 max-w-prose leading-relaxed whitespace-pre-line">
+                {book.synopsis}
+              </p>
+            </details>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {book.status === 'queued' && (
+              <ConfirmActionButton
+                action={startReading.bind(null, book.id)}
+                confirmMessage={`Start reading "${book.title}" now? The current book (if any) moves to History and the pick rotation advances.`}
+                pendingLabel="Starting…"
+                className="btn btn-primary"
+              >
+                Start reading
+              </ConfirmActionButton>
+            )}
+            <Link href={`/books/${book.id}/edit`} className="btn btn-secondary">
               Edit
             </Link>
-          </div>
-          {book.author && <p className="text-stone-600">by {book.author}</p>}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2 text-sm text-stone-600">
-            {book.page_count && <span>{book.page_count} pages</span>}
-            {book.genre && <span>{book.genre}</span>}
-            {book.picker?.display_name && <span>Picked by {book.picker.display_name}</span>}
-            {days && pace && (
-              <span>
-                Read in {days} days ({pace.toFixed(1)} pg/day)
-              </span>
-            )}
-            {averageRating !== null && (
-              <span className="group relative font-medium text-stone-900">
-                Avg rating: {averageRating.toFixed(1)}/10
-                <div className="pointer-events-none absolute bottom-full left-0 z-10 mb-1 hidden min-w-max flex-col gap-0.5 rounded bg-stone-900 px-2 py-1 text-xs font-normal text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:flex group-hover:opacity-100">
-                  {ratingsNotes
-                    ?.filter((rn) => rn.rating !== null)
-                    .map((rn) => (
-                      <span key={rn.id}>
-                        {rn.profile?.display_name ?? 'Unknown'}: {rn.rating}/10
-                      </span>
-                    ))}
-                </div>
-              </span>
-            )}
+            <a href={goodreadsUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+              Goodreads ↗
+            </a>
+            <a href={amazonUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+              Amazon ↗
+            </a>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div>
-          <h2 className="mb-2 text-lg font-bold text-stone-900">Your rating & notes</h2>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <section>
+          <h2 className="section-title mb-3">Your rating &amp; notes</h2>
           <RatingInput
             bookId={book.id}
             initialRating={myRating?.rating ?? null}
             initialNotes={myRating?.notes ?? null}
+            initialDidNotFinish={Boolean(myRating?.did_not_finish)}
           />
-        </div>
-        <div>
-          <h2 className="mb-2 text-lg font-bold text-stone-900">Everyone&apos;s thoughts</h2>
-          <NotesList ratingsNotes={ratingsNotes ?? []} />
-        </div>
+        </section>
+        <section>
+          <h2 className="section-title mb-3">What everyone thought</h2>
+          <NotesList ratingsNotes={notes} />
+        </section>
       </div>
 
-      <div>
-        <h2 className="mb-2 text-lg font-bold text-stone-900">Favorite quotes</h2>
+      <section>
+        <h2 className="section-title mb-3">Favorite quotes</h2>
         <QuoteList bookId={book.id} quotes={quotes ?? []} currentUserId={user?.id ?? ''} />
-      </div>
+      </section>
     </div>
   )
 }

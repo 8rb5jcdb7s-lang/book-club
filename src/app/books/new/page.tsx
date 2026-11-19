@@ -1,23 +1,41 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import BookForm from '@/components/BookForm'
+import { todayStr } from '@/lib/dates'
+import type { BookStatus } from '@/lib/types'
 
-export default async function NewBookPage() {
+export const metadata: Metadata = { title: 'Add a book' }
+
+const STATUSES: BookStatus[] = ['reading', 'finished', 'queued']
+
+export default async function NewBookPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const { status } = await searchParams
   const supabase = await createClient()
 
   const [{ data: profiles }, { data: rotation }] = await Promise.all([
     supabase.from('profiles').select('*').order('display_name'),
-    supabase.from('picker_rotation').select('member_order, current_index').eq('id', 1).single(),
+    supabase
+      .from('picker_rotation')
+      .select('member_order, current_index')
+      .eq('id', 1)
+      .maybeSingle(),
   ])
 
-  let defaultPickerId: string | null = null
-  if (rotation && rotation.member_order.length > 0) {
-    defaultPickerId = rotation.member_order[rotation.current_index] ?? null
-  }
+  const defaultPickerId = rotation?.member_order?.[rotation.current_index] ?? null
 
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="mb-6 text-2xl font-bold text-stone-900">Add a book</h1>
-      <BookForm profiles={profiles ?? []} defaultPickerId={defaultPickerId} />
+    <div className="mx-auto max-w-2xl space-y-6">
+      <h1 className="page-title">Add a book</h1>
+      <BookForm
+        profiles={profiles ?? []}
+        defaultPickerId={defaultPickerId}
+        defaultStatus={STATUSES.find((s) => s === status) ?? 'reading'}
+        today={todayStr()}
+      />
     </div>
   )
 }

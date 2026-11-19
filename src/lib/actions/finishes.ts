@@ -11,12 +11,11 @@ export async function markFinished(bookId: string) {
   } = await supabase.auth.getUser()
   if (!user) return
 
-  await supabase.from('book_finishes').insert({
-    book_id: bookId,
-    user_id: user.id,
-  })
+  await supabase
+    .from('book_finishes')
+    .upsert({ book_id: bookId, user_id: user.id }, { onConflict: 'book_id,user_id' })
 
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
 }
 
 export async function unmarkFinished(bookId: string) {
@@ -33,5 +32,5 @@ export async function unmarkFinished(bookId: string) {
     .eq('book_id', bookId)
     .eq('user_id', user.id)
 
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
 }

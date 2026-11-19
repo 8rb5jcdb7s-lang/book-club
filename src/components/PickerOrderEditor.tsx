@@ -1,14 +1,16 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { updateRotationOrder } from '@/lib/actions/rotation'
+import { updateRotation } from '@/lib/actions/rotation'
 import type { Profile } from '@/lib/types'
 
 export default function PickerOrderEditor({
   memberOrder,
+  currentIndex,
   profiles,
 }: {
   memberOrder: string[]
+  currentIndex: number
   profiles: Profile[]
 }) {
   const profileMap = new Map(profiles.map((p) => [p.id, p.display_name]))
@@ -20,9 +22,12 @@ export default function PickerOrderEditor({
   ]
 
   const [order, setOrder] = useState(initialOrder)
+  const [nextId, setNextId] = useState<string | null>(
+    memberOrder[currentIndex] ?? initialOrder[0] ?? null
+  )
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<{ saved?: boolean; error?: string }>({})
 
   function move(index: number, direction: -1 | 1) {
     const newIndex = index + direction
@@ -30,48 +35,62 @@ export default function PickerOrderEditor({
     const next = [...order]
     ;[next[index], next[newIndex]] = [next[newIndex], next[index]]
     setOrder(next)
-    setSaved(false)
+    setStatus({})
   }
 
   function handleSave() {
     startTransition(async () => {
-      await updateRotationOrder(order)
-      setSaved(true)
+      const result = await updateRotation(order, nextId)
+      setStatus(result?.error ? { error: result.error } : { saved: true })
     })
   }
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-2 text-xs text-stone-500 hover:text-stone-900 hover:underline"
-      >
-        Edit pick order
+      <button type="button" onClick={() => setOpen(true)} className="btn btn-ghost btn-sm">
+        Edit order
       </button>
     )
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border border-stone-200 p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-        Pick order
-      </p>
-      <ol className="space-y-1">
+    <div className="mt-4 w-full space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
+      <div>
+        <p className="text-sm font-semibold text-stone-900">Edit the pick order</p>
+        <p className="hint mt-0">
+          Use the arrows to reorder, and choose whose turn it is next.
+        </p>
+      </div>
+      <ol className="space-y-1.5">
         {order.map((id, i) => (
           <li
             key={id}
-            className="flex items-center justify-between rounded-md bg-stone-50 px-2 py-1 text-sm"
+            className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm"
           >
-            <span>
-              {i + 1}. {profileMap.get(id) ?? 'Unknown'}
+            <span className="w-4 text-xs text-stone-400 tabular-nums">{i + 1}</span>
+            <span className="flex-1 font-medium text-stone-800">
+              {profileMap.get(id) ?? 'Unknown'}
             </span>
-            <span className="flex gap-1">
+            <label className="flex items-center gap-1.5 text-xs text-stone-600">
+              <input
+                type="radio"
+                name="next-picker"
+                checked={nextId === id}
+                onChange={() => {
+                  setNextId(id)
+                  setStatus({})
+                }}
+                className="accent-amber-600"
+              />
+              Next up
+            </label>
+            <span className="flex gap-0.5">
               <button
                 type="button"
                 onClick={() => move(i, -1)}
                 disabled={i === 0}
-                className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-200 disabled:opacity-30"
+                aria-label={`Move ${profileMap.get(id) ?? 'member'} up`}
+                className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-100 disabled:opacity-30"
               >
                 ↑
               </button>
@@ -79,7 +98,8 @@ export default function PickerOrderEditor({
                 type="button"
                 onClick={() => move(i, 1)}
                 disabled={i === order.length - 1}
-                className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-200 disabled:opacity-30"
+                aria-label={`Move ${profileMap.get(id) ?? 'member'} down`}
+                className="rounded px-2 py-0.5 text-stone-500 hover:bg-stone-100 disabled:opacity-30"
               >
                 ↓
               </button>
@@ -92,18 +112,15 @@ export default function PickerOrderEditor({
           type="button"
           onClick={handleSave}
           disabled={isPending}
-          className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-stone-700 hover:shadow-md active:scale-95 transition-all disabled:opacity-50"
+          className="btn btn-primary btn-sm"
         >
-          {isPending ? 'Saving...' : 'Save order'}
+          {isPending ? 'Saving…' : 'Save order'}
         </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-sm text-stone-500 hover:underline"
-        >
+        <button type="button" onClick={() => setOpen(false)} className="btn btn-ghost btn-sm">
           Close
         </button>
-        {saved && <span className="text-xs text-green-700">Saved!</span>}
+        {status.saved && <span className="text-xs font-medium text-emerald-700">Saved ✓</span>}
+        {status.error && <span className="text-xs text-red-600">{status.error}</span>}
       </div>
     </div>
   )
