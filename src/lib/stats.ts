@@ -261,7 +261,10 @@ export function pagesByMonth(books: Book[], year: number | null): MonthBucket[] 
 export function ratingDistribution(ratingsNotes: RatingNote[]): number[] {
   const counts = Array<number>(10).fill(0)
   for (const rn of ratingsNotes) {
-    if (rn.rating !== null && rn.rating >= 1 && rn.rating <= 10) counts[rn.rating - 1] += 1
+    // Half points are counted with the whole number below them (7.5 -> 7).
+    if (rn.rating !== null && rn.rating >= 1 && rn.rating <= 10) {
+      counts[Math.floor(rn.rating) - 1] += 1
+    }
   }
   return counts
 }

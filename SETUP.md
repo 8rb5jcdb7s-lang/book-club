@@ -57,6 +57,7 @@ haven't yet:
 - `add_book_finishes.sql` — "I finished it!" / ready to discuss
 - `add_book_synopsis.sql`, `add_book_links.sql` — synopsis and Goodreads/Amazon links
 - `add_did_not_finish.sql` — lets a member mark a book "did not finish" instead of rating it
+- `add_half_point_ratings.sql` — allows ratings in half-point steps (7.5)
 
 ## 8. Keeping Supabase awake
 

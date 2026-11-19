@@ -457,7 +457,8 @@ export default async function StatsPage({
               <section className="card p-5 sm:p-6">
                 <h2 className="section-title">How we score</h2>
                 <p className="text-sm text-stone-500">
-                  All {totalRatings} ratings{year ? ` from ${year}` : ''}, by score.
+                  All {totalRatings} ratings{year ? ` from ${year}` : ''}, by score. Half points
+                  count with the number below.
                 </p>
                 <ol className="mt-5 grid h-40 grid-cols-10 items-end gap-1.5 sm:gap-2">
                   {distribution.map((n, i) => (

@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/dates'
 import { daysTaken, historicalPace } from '@/lib/pace'
 import { startReading } from '@/lib/actions/books'
-import Avatar from '@/components/Avatar'
 import BookCover from '@/components/BookCover'
 import ConfirmActionButton from '@/components/ConfirmActionButton'
 import NotesList from '@/components/NotesList'
+import PickerSelect from '@/components/PickerSelect'
 import QuoteList from '@/components/QuoteList'
 import RatingInput from '@/components/RatingInput'
 import ScoreBadge from '@/components/ScoreBadge'
@@ -36,6 +36,7 @@ export default async function BookDetailPage({
     { data: book },
     { data: ratingsNotes },
     { data: quotes },
+    { data: members },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase
@@ -53,6 +54,7 @@ export default async function BookDetailPage({
       .select('*, profile:profiles!user_id(display_name)')
       .eq('book_id', id)
       .order('created_at', { ascending: true }),
+    supabase.from('profiles').select('id, display_name, avatar_url').order('display_name'),
   ])
 
   if (!book) notFound()
@@ -80,22 +82,10 @@ export default async function BookDetailPage({
   const facts: { label: string; value: React.ReactNode }[] = []
   if (book.page_count) facts.push({ label: 'Pages', value: book.page_count })
   if (book.genre) facts.push({ label: 'Genre', value: book.genre })
-  if (book.picker) {
-    facts.push({
-      label: book.status === 'queued' ? 'Suggested by' : 'Picked by',
-      value: (
-        <span className="flex items-center gap-1.5">
-          <Avatar
-            name={book.picker.display_name}
-            url={book.picker.avatar_url}
-            size={5}
-            showTooltip={false}
-          />
-          {book.picker.display_name}
-        </span>
-      ),
-    })
-  }
+  facts.push({
+    label: book.status === 'queued' ? 'Suggested by' : 'Picked by',
+    value: <PickerSelect bookId={book.id} pickedBy={book.picked_by} members={members ?? []} />,
+  })
   if (book.date_started) facts.push({ label: 'Started', value: formatDate(book.date_started) })
   if (book.date_finished) facts.push({ label: 'Finished', value: formatDate(book.date_finished) })
   if (days && pace) {

@@ -6,9 +6,10 @@ export type FeaturedQuote = {
   name: 'Miles' | 'Gus' | 'Henry' | 'Noah'
 }
 
-// A pool of real literary/historical quotes that happen to contain
-// 'Miles', 'Gus' (via Augustus), 'Henry', or 'Noah' -- one is shown at random
-// on the home page, with no-repeat tracking in localStorage.
+// A pool of real lines from public-domain books that happen to contain
+// 'Miles', 'Gus', 'Henry', or 'Noah' -- sometimes as a character, sometimes
+// hiding inside another word (Augustus, disgusted, "miles away"). The home
+// page shows one a day and lets people guess the author.
 export const FEATURED_QUOTES: FeaturedQuote[] = [
   { quote: "In the Old Colony days, in Plymouth the land of the Pilgrims, To and fro in a room of his simple and primitive dwelling, Clad in doublet and hose, and boots of Cordovan leather, Strode, with a martial air, Miles Standish the Puritan Captain.", highlight: "Miles", author: "Henry Wadsworth Longfellow", source: "The Courtship of Miles Standish, Part I: Miles Standish", name: 'Miles' },
   { quote: "Yes; Miles Standish was dead!--an Indian had brought them the tidings,-- Slain by a poisoned arrow, shot down in the front of the battle, Into an ambush beguiled, cut off with the whole of his forces; All the town would be burned, and all the people be murdered!", highlight: "Miles", author: "Henry Wadsworth Longfellow", source: "The Courtship of Miles Standish, Part VIII: The Spinning-Wheel", name: 'Miles' },
@@ -62,4 +63,41 @@ export const FEATURED_QUOTES: FeaturedQuote[] = [
   { quote: "Every man on board seemed well content, and they must have been hard to please if they had been otherwise, for it is my belief there was never a ship\u2019s company so spoiled since Noah put to sea.", highlight: "Noah", author: "Robert Louis Stevenson", source: "Treasure Island, Ch. XI", name: 'Noah' },
   { quote: "And thus was Noah, with his family, preserved.", highlight: "Noah", author: "Flavius Josephus", source: "Antiquities of the Jews, Book I", name: 'Noah' },
   { quote: "After this, the ark rested on the top of a certain mountain in Armenia; which, when Noah understood, he opened it; and seeing a small piece of land about it, he continued quiet, and conceived some cheerful hopes of deliverance.", highlight: "Noah", author: "Flavius Josephus", source: "Antiquities of the Jews, Book I", name: 'Noah' },
+  { quote: "\u201cI can sympathize with everything except suffering,\u201d said Lord Henry, shrugging his shoulders.", highlight: "Henry", author: "Oscar Wilde", source: "The Picture of Dorian Gray, Ch. III", name: 'Henry' },
+  { quote: "\u201cThe husbands of very beautiful women belong to the criminal classes,\u201d said Lord Henry, sipping his wine.", highlight: "Henry", author: "Oscar Wilde", source: "The Picture of Dorian Gray, Ch. XV", name: 'Henry' },
+  { quote: "\u201cOh! anything becomes a pleasure if one does it too often,\u201d cried Lord Henry, laughing.", highlight: "Henry", author: "Oscar Wilde", source: "The Picture of Dorian Gray, Ch. XIX", name: 'Henry' },
+  { quote: "\u201cThe basis of every scandal is an immoral certainty,\u201d said Lord Henry, lighting a cigarette.", highlight: "Henry", author: "Oscar Wilde", source: "The Picture of Dorian Gray, Ch. XVIII", name: 'Henry' },
+  { quote: "\u201cNothing is ever quite true,\u201d said Lord Henry.", highlight: "Henry", author: "Oscar Wilde", source: "The Picture of Dorian Gray, Ch. VI", name: 'Henry' },
+  { quote: "Yes, I had gone to bed Henry Jekyll, I had awakened Edward Hyde.", highlight: "Henry", author: "Robert Louis Stevenson", source: "Strange Case of Dr Jekyll and Mr Hyde", name: 'Henry' },
+  { quote: "And the next one to touch me will be you, Henry Higgins.", highlight: "Henry", author: "George Bernard Shaw", source: "Pygmalion, Act V", name: 'Henry' },
+  { quote: "My, you ought to seen old Henry the Eight when he was in bloom.", highlight: "Henry", author: "Mark Twain", source: "Adventures of Huckleberry Finn, Ch. XXIII", name: 'Henry' },
+  { quote: "That\u2019s the kind of a bug Henry was; and if we\u2019d a had him along \u2019stead of our kings he\u2019d a fooled that town a heap worse than ourn done.", highlight: "Henry", author: "Mark Twain", source: "Adventures of Huckleberry Finn, Ch. XXIII", name: 'Henry' },
+  { quote: "Henry is the eldest, he was named after me, not after his father.", highlight: "Henry", author: "Jane Austen", source: "Emma", name: 'Henry' },
+  { quote: "I was surprised to see Sir Henry such a stick.", highlight: "Henry", author: "Jane Austen", source: "Mansfield Park, Ch. XIII", name: 'Henry' },
+  { quote: "The woods are lovely, dark and deep, But I have promises to keep, And miles to go before I sleep, And miles to go before I sleep.", highlight: "miles", author: "Robert Frost", source: "Stopping by Woods on a Snowy Evening", name: 'Miles' },
+  { quote: "Solitude is not measured by the miles of space that intervene between a man and his fellows.", highlight: "miles", author: "Henry David Thoreau", source: "Walden", name: 'Miles' },
+  { quote: "\u201cThere are not many of your own sort, Miles!\u201d", highlight: "Miles", author: "Henry James", source: "The Turn of the Screw, Ch. XIV", name: 'Miles' },
+  { quote: "\u201cI see, I see\u201d\u2014Miles, for that matter, was grand, too.", highlight: "Miles", author: "Henry James", source: "The Turn of the Screw, Ch. XXII", name: 'Miles' },
+  { quote: "Dear little Miles, dear little Miles, if you knew how I want to help you!", highlight: "Miles", author: "Henry James", source: "The Turn of the Screw, Ch. XVII", name: 'Miles' },
+  { quote: "Thus we held on, speaking little, for four or five dull miles.", highlight: "miles", author: "Charles Dickens", source: "Great Expectations, Ch. LIV", name: 'Miles' },
+  { quote: "Temple Bar was hundreds of miles away, and Madame Defarge was drawing very near indeed.", highlight: "miles", author: "Charles Dickens", source: "A Tale of Two Cities, Book III, Ch. XIV", name: 'Miles' },
+  { quote: "My journey seemed tedious\u2014very tedious: fifty miles one day, a night spent at an inn; fifty miles the next day.", highlight: "miles", author: "Charlotte Bront\u00eb", source: "Jane Eyre, Ch. XXII", name: 'Miles' },
+  { quote: "At seven they were still three miles from Shanghai.", highlight: "miles", author: "Jules Verne", source: "Around the World in Eighty Days, Ch. XX", name: 'Miles' },
+  { quote: "And Noah began to be an husbandman, and he planted a vineyard: And he drank of the wine, and was drunken", highlight: "Noah", author: "King James Bible", source: "Genesis 9:20\u201321", name: 'Noah' },
+  { quote: "And Noah was six hundred years old when the flood of waters was upon the earth.", highlight: "Noah", author: "King James Bible", source: "Genesis 7:6", name: 'Noah' },
+  { quote: "And all the days of Noah were nine hundred and fifty years: and he died.", highlight: "Noah", author: "King James Bible", source: "Genesis 9:29", name: 'Noah' },
+  { quote: "Thus did Noah; according to all that God commanded him, so did he.", highlight: "Noah", author: "King James Bible", source: "Genesis 6:22", name: 'Noah' },
+  { quote: "Johnson never attained to that erudition; Noah Webster\u2019s ark does not hold it.", highlight: "Noah", author: "Herman Melville", source: "Moby-Dick, Ch. 53", name: 'Noah' },
+  { quote: "The same!\u2014the same!\u2014the same to Noah as to me.", highlight: "Noah", author: "Herman Melville", source: "Moby-Dick, Ch. 135", name: 'Noah' },
+  { quote: "\u2018Augustus, my sweet child, bring me a chair.\u2019", highlight: "Augustus", author: "Charles Dickens", source: "Martin Chuzzlewit, Ch. XLVI", name: 'Gus' },
+  { quote: "Augustus had been making some faint and sickly demonstration of shaking his fist.", highlight: "Augustus", author: "Charles Dickens", source: "Martin Chuzzlewit, Ch. XLVI", name: 'Gus' },
+  { quote: "So long as Augustus is my own, I cannot want a friend.", highlight: "Augustus", author: "Charles Dickens", source: "Martin Chuzzlewit, Ch. LIV", name: 'Gus' },
+  { quote: "When you speak of friends, sir, I must beg, once for all, to refer you to Augustus.", highlight: "Augustus", author: "Charles Dickens", source: "Martin Chuzzlewit, Ch. LIV", name: 'Gus' },
+  { quote: "Wait till you see Augustus, and I am sure he will conciliate your affections.", highlight: "Augustus", author: "Charles Dickens", source: "Martin Chuzzlewit, Ch. LIV", name: 'Gus' },
+  { quote: "I think Augustus must have gone straight to the Altar!", highlight: "Augustus", author: "Charles Dickens", source: "Martin Chuzzlewit, Ch. LIV", name: 'Gus' },
+  { quote: "I am disgusted with my calling and with my life.", highlight: "gus", author: "Charles Dickens", source: "Great Expectations, Ch. XVII", name: 'Gus' },
+  { quote: "She was disgustingly, was suspiciously reserved.", highlight: "gus", author: "Jane Austen", source: "Emma", name: 'Gus' },
+  { quote: "Freckles do not disgust me so very much as they do him.", highlight: "gus", author: "Jane Austen", source: "Persuasion, Ch. V", name: 'Gus' },
+  { quote: "Elizabeth was disgusted, and even Miss Bennet was shocked.", highlight: "gus", author: "Jane Austen", source: "Pride and Prejudice, Ch. LI", name: 'Gus' },
+  { quote: "And in August, high in air, the beautiful and bountiful horse-chestnuts, candelabra-wise, proffer the passer-by their tapering upright cones of congregated blossoms.", highlight: "gus", author: "Herman Melville", source: "Moby-Dick, Ch. 6", name: 'Gus' },
 ]

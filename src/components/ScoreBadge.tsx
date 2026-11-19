@@ -29,7 +29,8 @@ export default function ScoreBadge({
         className={`inline-flex items-center justify-center rounded-full font-bold tabular-nums ${sizes[size]}`}
         style={scoreColors(rating)}
       >
-        {rating.toFixed(decimals)}
+        {/* Whole scores show as "7"; half points always keep their ".5". */}
+        {rating.toFixed(decimals === 0 && !Number.isInteger(rating) ? 1 : decimals)}
       </span>
       {breakdown && breakdown.length > 0 && (
         <span className="tooltip bottom-full left-1/2 mb-1.5 flex -translate-x-1/2 flex-col gap-0.5 group-hover/score:opacity-100">

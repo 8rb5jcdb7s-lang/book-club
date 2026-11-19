@@ -277,6 +277,16 @@ export async function updatePagesRead(bookId: string, pages: number): Promise<Ac
   return undefined
 }
 
+/** Corrects who picked (or suggested) a book. */
+export async function updatePicker(bookId: string, pickedBy: string | null): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('books').update({ picked_by: pickedBy }).eq('id', bookId)
+  if (error) return { error: friendlyError(error) }
+
+  revalidateAll()
+  return undefined
+}
+
 export async function deleteBook(bookId: string, redirectTo?: string): Promise<ActionResult> {
   const supabase = await createClient()
   const { error } = await supabase.from('books').delete().eq('id', bookId)

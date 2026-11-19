@@ -105,7 +105,12 @@ export default async function DashboardPage() {
       </div>
 
       <div className="space-y-6">
-        <QuoteOfTheDayCard />
+        <QuoteOfTheDayCard
+          members={(profiles ?? []).map((profile) => ({
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url,
+          }))}
+        />
 
         <div className="card p-5 sm:p-6">
           <div className="flex items-center justify-between">

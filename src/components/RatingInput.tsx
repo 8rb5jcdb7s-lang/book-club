@@ -18,7 +18,13 @@ export default function RatingInput({
     upsertRatingNote,
     undefined
   )
-  const [rating, setRating] = useState<number | null>(initialRating)
+  // The score is a whole number picked from the row of buttons, plus an
+  // optional half point.
+  const [whole, setWhole] = useState<number | null>(
+    initialRating === null ? null : Math.floor(initialRating)
+  )
+  const [half, setHalf] = useState(initialRating !== null && !Number.isInteger(initialRating))
+  const rating = whole === null ? null : whole + (half && whole < 10 ? 0.5 : 0)
   const [notes, setNotes] = useState(initialNotes ?? '')
   const [didNotFinish, setDidNotFinish] = useState(initialDidNotFinish)
   const [dirty, setDirty] = useState(false)
@@ -54,8 +60,10 @@ export default function RatingInput({
               aria-label="Rating out of 10"
             >
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
-                const selected = rating === n
-                const filled = rating !== null && n <= rating
+                const selected = whole === n
+                const filled = whole !== null && n <= whole
+                // The cell after the chosen number shows the extra half point.
+                const halfFilled = rating !== null && whole !== null && n === whole + 1 && rating > whole
                 return (
                   <button
                     key={n}
@@ -64,7 +72,13 @@ export default function RatingInput({
                     aria-checked={selected}
                     aria-label={`${n} out of 10`}
                     onClick={() => {
-                      setRating(selected ? null : n)
+                      if (selected) {
+                        setWhole(null)
+                        setHalf(false)
+                      } else {
+                        setWhole(n)
+                        if (n === 10) setHalf(false)
+                      }
                       setDirty(true)
                     }}
                     className={`h-10 rounded-md text-sm font-semibold tabular-nums transition-colors ${
@@ -72,7 +86,9 @@ export default function RatingInput({
                         ? 'bg-stone-900 text-white'
                         : filled
                           ? 'bg-amber-200 text-amber-950 hover:bg-amber-300'
-                          : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                          : halfFilled
+                            ? 'bg-linear-to-r from-amber-200 from-50% to-stone-100 to-50% text-stone-600'
+                            : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
                     }`}
                   >
                     {n}
@@ -80,11 +96,37 @@ export default function RatingInput({
                 )
               })}
             </div>
-            <p className="hint">
-              {rating === null
-                ? 'Tap a number from 1 to 10.'
-                : 'Tap your rating again to clear it.'}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                aria-pressed={half}
+                disabled={whole === null || whole === 10}
+                onClick={() => {
+                  setHalf(!half)
+                  setDirty(true)
+                }}
+                className={`btn btn-sm ${
+                  half && whole !== null && whole < 10
+                    ? 'bg-amber-200 text-amber-950 hover:bg-amber-300'
+                    : 'btn-secondary'
+                }`}
+              >
+                + ½ point
+              </button>
+              <p className="text-sm text-stone-500">
+                {rating === null ? (
+                  'Tap a number, then add a half point if you need one.'
+                ) : (
+                  <>
+                    Your score:{' '}
+                    <span className="font-semibold text-stone-900 tabular-nums">
+                      {rating} / 10
+                    </span>
+                    <span className="text-stone-400"> · tap the number again to clear</span>
+                  </>
+                )}
+              </p>
+            </div>
           </>
         )}
 

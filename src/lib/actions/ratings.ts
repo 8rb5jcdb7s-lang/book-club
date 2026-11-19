@@ -21,10 +21,11 @@ export async function upsertRatingNote(
   const notes = ((formData.get('notes') as string) ?? '').trim() || null
   const didNotFinish = formData.get('did_not_finish') === 'true'
   // A book you didn't finish doesn't get a score.
-  const rating = didNotFinish || !ratingRaw ? null : parseInt(ratingRaw, 10)
+  const rating = didNotFinish || !ratingRaw ? null : parseFloat(ratingRaw)
 
-  if (rating !== null && !(rating >= 1 && rating <= 10)) {
-    return { error: 'Rating must be between 1 and 10.' }
+  // Whole or half points only, from 1 to 10.
+  if (rating !== null && !(rating >= 1 && rating <= 10 && Number.isInteger(rating * 2))) {
+    return { error: 'Rating must be between 1 and 10, in half-point steps.' }
   }
   if (rating === null && notes === null && !didNotFinish) {
     return { error: 'Add a rating or a few thoughts first.' }
@@ -59,6 +60,13 @@ export async function upsertRatingNote(
       .upsert(row, { onConflict: 'book_id,user_id' }))
   }
 
+  // Half points need the rating column to accept decimals (one-time migration).
+  if (error?.code === '22P02' && rating !== null && !Number.isInteger(rating)) {
+    return {
+      error:
+        'Half-point ratings need a one-time database update: run supabase/migrations/add_half_point_ratings.sql in the Supabase SQL editor.',
+    }
+  }
   if (error) return { error: error.message }
 
   revalidatePath('/', 'layout')
