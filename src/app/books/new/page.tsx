@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import BookForm from '@/components/BookForm'
 import { todayStr } from '@/lib/dates'
+import { pickQueue } from '@/lib/picks'
 import type { BookStatus } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Add a book' }
@@ -16,16 +17,16 @@ export default async function NewBookPage({
   const { status } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: profiles }, { data: rotation }] = await Promise.all([
+  const [{ data: profiles }, { data: pickedBooks }] = await Promise.all([
     supabase.from('profiles').select('*').order('display_name'),
     supabase
-      .from('picker_rotation')
-      .select('member_order, current_index')
-      .eq('id', 1)
-      .maybeSingle(),
+      .from('books')
+      .select('id, title, status, picked_by, date_started, date_finished, created_at')
+      .in('status', ['reading', 'finished']),
   ])
 
-  const defaultPickerId = rotation?.member_order?.[rotation.current_index] ?? null
+  // Pre-select whoever has waited longest since their last pick.
+  const defaultPickerId = pickQueue(pickedBooks ?? [], profiles ?? [])[0]?.profile.id ?? null
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

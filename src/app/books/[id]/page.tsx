@@ -4,14 +4,14 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/dates'
 import { daysTaken, historicalPace } from '@/lib/pace'
-import { startReading } from '@/lib/actions/books'
+import { pickQueue } from '@/lib/picks'
 import BookCover from '@/components/BookCover'
-import ConfirmActionButton from '@/components/ConfirmActionButton'
 import NotesList from '@/components/NotesList'
 import PickerSelect from '@/components/PickerSelect'
 import QuoteList from '@/components/QuoteList'
 import RatingInput from '@/components/RatingInput'
 import ScoreBadge from '@/components/ScoreBadge'
+import StartReadingButton from '@/components/StartReadingButton'
 
 export const metadata: Metadata = { title: 'Book' }
 
@@ -54,10 +54,20 @@ export default async function BookDetailPage({
       .select('*, profile:profiles!user_id(display_name)')
       .eq('book_id', id)
       .order('created_at', { ascending: true }),
-    supabase.from('profiles').select('id, display_name, avatar_url').order('display_name'),
+    supabase.from('profiles').select('*').order('display_name'),
   ])
 
   if (!book) notFound()
+
+  // Only needed to suggest a picker when starting a book from the list.
+  let suggestedPickerId: string | null = null
+  if (book.status === 'queued') {
+    const { data: pickedBooks } = await supabase
+      .from('books')
+      .select('id, title, status, picked_by, date_started, date_finished, created_at')
+      .in('status', ['reading', 'finished'])
+    suggestedPickerId = pickQueue(pickedBooks ?? [], members ?? [])[0]?.profile.id ?? null
+  }
 
   const days = daysTaken(book)
   const pace = historicalPace(book)
@@ -161,14 +171,12 @@ export default async function BookDetailPage({
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {book.status === 'queued' && (
-              <ConfirmActionButton
-                action={startReading.bind(null, book.id)}
-                confirmMessage={`Start reading "${book.title}" now? The current book (if any) moves to History and the pick rotation advances.`}
-                pendingLabel="Starting…"
+<StartReadingButton
+                bookId={book.id}
+                members={members ?? []}
+                suggestedPickerId={suggestedPickerId}
                 className="btn btn-primary"
-              >
-                Start reading
-              </ConfirmActionButton>
+              />
             )}
             <Link href={`/books/${book.id}/edit`} className="btn btn-secondary">
               Edit

@@ -4,8 +4,10 @@ import Avatar from '@/components/Avatar'
 import BookCover from '@/components/BookCover'
 import ConfirmActionButton from '@/components/ConfirmActionButton'
 import RandomPick from '@/components/RandomPick'
+import StartReadingButton from '@/components/StartReadingButton'
 import WantToReadAddForm from '@/components/WantToReadAddForm'
-import { deleteBook, startReading } from '@/lib/actions/books'
+import { deleteBook } from '@/lib/actions/books'
+import { pickQueue } from '@/lib/picks'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Want to Read' }
@@ -13,11 +15,22 @@ export const metadata: Metadata = { title: 'Want to Read' }
 export default async function WantToReadPage() {
   const supabase = await createClient()
 
-  const { data: books } = await supabase
-    .from('books')
-    .select('*, picker:profiles!picked_by(display_name, avatar_url)')
-    .eq('status', 'queued')
-    .order('created_at', { ascending: false })
+  const [{ data: books }, { data: profiles }, { data: pickedBooks }] = await Promise.all([
+    supabase
+      .from('books')
+      .select('*, picker:profiles!picked_by(display_name, avatar_url)')
+      .eq('status', 'queued')
+      .order('created_at', { ascending: false }),
+    supabase.from('profiles').select('*').order('display_name'),
+    supabase
+      .from('books')
+      .select('id, title, status, picked_by, date_started, date_finished, created_at')
+      .in('status', ['reading', 'finished']),
+  ])
+
+  const members = profiles ?? []
+  // Whoever has waited longest since their last pick is offered as the picker.
+  const suggestedPickerId = pickQueue(pickedBooks ?? [], members)[0]?.profile.id ?? null
 
   return (
     <div className="space-y-6">
@@ -74,18 +87,15 @@ export default async function WantToReadPage() {
                       size={5}
                       showTooltip={false}
                     />
-                    Added by {book.picker.display_name}
+                    Suggested by {book.picker.display_name}
                   </p>
                 )}
                 <div className="mt-auto flex flex-wrap items-center gap-1 pt-3">
-                  <ConfirmActionButton
-                    action={startReading.bind(null, book.id)}
-                    confirmMessage={`Start reading "${book.title}" now? The current book (if any) moves to History and the pick rotation advances.`}
-                    pendingLabel="Starting…"
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Start reading
-                  </ConfirmActionButton>
+<StartReadingButton
+                    bookId={book.id}
+                    members={members}
+                    suggestedPickerId={suggestedPickerId}
+                  />
                   <ConfirmActionButton
                     action={deleteBook.bind(null, book.id, undefined)}
                     confirmMessage={`Remove "${book.title}" from the list?`}

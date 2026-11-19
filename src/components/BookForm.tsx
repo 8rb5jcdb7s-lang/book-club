@@ -213,8 +213,7 @@ export default function BookForm({
         </div>
         {!isEdit && status === 'reading' && (
           <p className="hint">
-            The book you&apos;re reading now (if any) moves to History, and the pick rotation
-            advances.
+            The book you&apos;re reading now (if any) moves to History.
           </p>
         )}
       </fieldset>

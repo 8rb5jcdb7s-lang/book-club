@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { pickQueue, recentPicks } from '@/lib/picks'
 import BookCover from '@/components/BookCover'
 import NowReadingCard from '@/components/NowReadingCard'
-import PickerRotationCard from '@/components/PickerRotationCard'
+import PickTrackerCard from '@/components/PickTrackerCard'
 import QuoteOfTheDayCard from '@/components/QuoteOfTheDayCard'
 
 type Finisher = {
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
 
   const [
     { data: book },
-    { data: rotation },
+    { data: pickedBooks },
     { data: profiles },
     { data: queued },
     {
@@ -29,10 +30,9 @@ export default async function DashboardPage() {
       .eq('status', 'reading')
       .maybeSingle(),
     supabase
-      .from('picker_rotation')
-      .select('member_order, current_index')
-      .eq('id', 1)
-      .maybeSingle(),
+      .from('books')
+      .select('id, title, status, picked_by, date_started, date_finished, created_at')
+      .in('status', ['reading', 'finished']),
     supabase.from('profiles').select('*').order('display_name'),
     supabase
       .from('books')
@@ -77,8 +77,8 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="space-y-6 lg:col-span-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="min-w-0 space-y-6 lg:col-span-2">
         {unratedBook && (
           <Link
             href={`/books/${unratedBook.id}`}
@@ -97,14 +97,13 @@ export default async function DashboardPage() {
           currentUserId={user?.id ?? null}
           hasQueuedBooks={queuedBooks.length > 0}
         />
-        <PickerRotationCard
-          memberOrder={rotation?.member_order ?? []}
-          currentIndex={rotation?.current_index ?? 0}
-          profiles={profiles ?? []}
+<PickTrackerCard
+          queue={pickQueue(pickedBooks ?? [], profiles ?? [])}
+          recent={recentPicks(pickedBooks ?? [])}
         />
       </div>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <QuoteOfTheDayCard
           members={(profiles ?? []).map((profile) => ({
             display_name: profile.display_name,

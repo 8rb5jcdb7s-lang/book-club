@@ -111,24 +111,6 @@ async function restoreActiveBooks(
   }
 }
 
-/** Moves the rotation to whoever comes after the person who just picked. */
-async function advanceRotation(supabase: Supabase, pickedBy: string | null) {
-  const { data: rotation } = await supabase
-    .from('picker_rotation')
-    .select('member_order, current_index')
-    .eq('id', 1)
-    .single()
-
-  if (!rotation || rotation.member_order.length === 0) return
-
-  const pickerIndex = pickedBy ? rotation.member_order.indexOf(pickedBy) : -1
-  const base = pickerIndex >= 0 ? pickerIndex : rotation.current_index
-  await supabase
-    .from('picker_rotation')
-    .update({ current_index: (base + 1) % rotation.member_order.length })
-    .eq('id', 1)
-}
-
 export async function createBook(
   _prevState: BookFormState,
   formData: FormData
@@ -156,8 +138,6 @@ export async function createBook(
     await restoreActiveBooks(supabase, previouslyActive)
     return { error: friendlyError(error) }
   }
-
-  if (isReading) await advanceRotation(supabase, fields.picked_by)
 
   revalidateAll()
   redirect(isReading ? '/' : fields.status === 'finished' ? '/books' : '/want-to-read')
@@ -201,16 +181,16 @@ export async function addToWantToRead(
   return undefined
 }
 
-/** Promotes a book from the want-to-read list to the club's current book. */
-export async function startReading(bookId: string): Promise<ActionResult> {
+/**
+ * Promotes a book from the want-to-read list to the club's current book.
+ * `pickedBy` says whose pick it counts as (the list only records who
+ * suggested it); leave it undefined to keep whoever is already on the book.
+ */
+export async function startReading(
+  bookId: string,
+  pickedBy?: string | null
+): Promise<ActionResult> {
   const supabase = await createClient()
-
-  const { data: rotation } = await supabase
-    .from('picker_rotation')
-    .select('member_order, current_index')
-    .eq('id', 1)
-    .single()
-  const currentPicker = rotation?.member_order?.[rotation.current_index] ?? null
 
   const previouslyActive = await finishActiveBooks(supabase, bookId)
 
@@ -221,8 +201,7 @@ export async function startReading(bookId: string): Promise<ActionResult> {
       date_started: todayStr(),
       date_finished: null,
       pages_read_so_far: 0,
-      // Credit the pick to whoever's turn it is.
-      ...(currentPicker ? { picked_by: currentPicker } : {}),
+      ...(pickedBy ? { picked_by: pickedBy } : {}),
     })
     .eq('id', bookId)
 
@@ -230,8 +209,6 @@ export async function startReading(bookId: string): Promise<ActionResult> {
     await restoreActiveBooks(supabase, previouslyActive)
     return { error: friendlyError(error) }
   }
-
-  await advanceRotation(supabase, currentPicker)
 
   revalidateAll()
   redirect('/')

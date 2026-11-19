@@ -54,9 +54,3 @@ export type BookFinish = {
   user_id: string
   finished_at: string
 }
-
-export type PickerRotation = {
-  id: number
-  member_order: string[]
-  current_index: number
-}
