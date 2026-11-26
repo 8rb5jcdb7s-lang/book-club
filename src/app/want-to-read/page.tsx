@@ -62,12 +62,18 @@ export default async function WantToReadPage() {
         <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {books.map((book) => (
             <li key={book.id} className="flex flex-col">
-              <BookCover
-                coverUrl={book.cover_url}
-                title={book.title}
-                author={book.author}
-                className="aspect-[2/3] w-full"
-              />
+              <Link
+                href={`/books/${book.id}`}
+                aria-label={`Open ${book.title}`}
+                className="block transition-transform hover:-translate-y-1"
+              >
+                <BookCover
+                  coverUrl={book.cover_url}
+                  title={book.title}
+                  author={book.author}
+                  className="aspect-[2/3] w-full"
+                />
+              </Link>
               <div className="mt-3 flex flex-1 flex-col">
                 <Link
                   href={`/books/${book.id}`}

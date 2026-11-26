@@ -26,6 +26,7 @@ export default function Avatar({
   size = 8,
   tooltip,
   showTooltip = true,
+  sticker = false,
 }: {
   name: string
   url?: string | null
@@ -33,15 +34,18 @@ export default function Avatar({
   size?: number
   tooltip?: string
   showTooltip?: boolean
+  /** Adds a white edge inside the outline so it stands out on top of a picture. */
+  sticker?: boolean
 }) {
   const dimension = size * 4
+  const outline = sticker ? 'border-2 border-white ring-2 ring-ink' : 'ring-2 ring-ink'
   const style = { width: dimension, height: dimension, fontSize: Math.max(9, dimension * 0.38) }
 
   return (
     <span className="group/avatar relative inline-flex shrink-0 hover:z-10">
       {url ? (
         <span
-          className="inline-flex overflow-hidden rounded-full bg-stone-100 ring-2 ring-ink"
+          className={`inline-flex overflow-hidden rounded-full bg-stone-100 ${outline}`}
           style={style}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -56,7 +60,7 @@ export default function Avatar({
         </span>
       ) : (
         <span
-          className={`inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-ink ${colorFor(name)}`}
+          className={`inline-flex items-center justify-center rounded-full font-semibold ${outline} ${colorFor(name)}`}
           style={style}
           aria-label={name}
         >

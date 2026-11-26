@@ -129,26 +129,27 @@ export default function BookHistory({ rows }: { rows: HistoryRow[] }) {
                     className="aspect-[2/3] w-full"
                   />
                   {averageRating !== null ? (
-                    <span className="absolute -top-2 right-0 rounded-full">
+                    <span className="absolute -top-2.5 -right-2 rounded-full">
                       <ScoreBadge rating={averageRating} size="sm" breakdown={breakdown} />
                     </span>
                   ) : (
-                    <span className="absolute -top-2 right-0 chip bg-white px-2 text-[10px]">
+                    <span className="absolute -top-2.5 -right-2 chip bg-white px-2 text-[10px]">
                       Rate it
                     </span>
                   )}
                   {book.picker && (
-                    <span className="absolute bottom-[7%] left-[13%]">
+                    <span className="absolute -bottom-2.5 -left-2">
                       <Avatar
                         name={book.picker.display_name}
                         url={book.picker.avatar_url}
-                        size={6}
+                        size={8}
+                        sticker
                         tooltip={`Picked by ${book.picker.display_name}`}
                       />
                     </span>
                   )}
                 </Link>
-                <Link href={`/books/${book.id}`} className="mt-2 block hover:underline">
+                <Link href={`/books/${book.id}`} className="mt-4 block hover:underline">
                   <span className="line-clamp-2 font-serif text-sm leading-snug font-semibold text-stone-900">
                     {book.title}
                   </span>

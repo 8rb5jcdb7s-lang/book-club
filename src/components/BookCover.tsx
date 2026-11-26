@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { sharperCoverUrl } from '@/lib/covers'
 
-// Every cover is drawn as the front of a little cartoon book in the same 2:3
-// shape. Images close to that shape fill it; anything squarer or taller is
+// Every cover is shown in the same 2:3 shape. Images close to that shape fill it; anything squarer or taller is
 // shown whole over a blurred copy of itself, so nothing gets cropped.
 const FRAME_RATIO = 2 / 3
 const RATIO_TOLERANCE = 0.09
@@ -31,7 +30,7 @@ function GeneratedCover({ title, author }: { title: string; author: string | nul
   const cloth = clothFor(title)
   return (
     <span
-      className="flex h-full w-full p-[7%] pl-[14%] [container-type:inline-size]"
+      className="flex h-full w-full p-[7%] [container-type:inline-size]"
       style={{ backgroundColor: cloth.background, color: cloth.ink }}
     >
       <span
@@ -52,11 +51,12 @@ function GeneratedCover({ title, author }: { title: string; author: string | nul
 }
 
 /**
- * A book, drawn cartoon-style: the cover art on the front, a darker spine
- * down the left, and the cream page block peeking out along the right and
- * bottom edges so it reads as a 3D object.
+ * A book cover shown as a sticker: the cover art exactly as it is, inside a
+ * thin white die-cut edge, a rounded ink outline and a small flat shadow.
+ * Nothing is drawn over the picture itself.
  *
- * Size it with `className` (a 2:3 box, e.g. `aspect-[2/3] w-40`).
+ * Size it with `className` (a 2:3 box, e.g. `aspect-[2/3] w-40`). The edge
+ * and shadow scale with the cover, so it looks the same large or small.
  */
 export default function BookCover({
   coverUrl,
@@ -76,59 +76,44 @@ export default function BookCover({
   const broken = src !== null && failedUrl === src
 
   return (
-    <div className={`relative ${className}`}>
-      {/* The page block, offset down and to the right of the cover. */}
-      <span
-        className="absolute top-[5%] right-0 bottom-0 left-[8%] rounded-[4%_12%_14%_6%/3%_8%_9%_5%] border-2 border-ink bg-[#fffaf0] shadow-[inset_-3px_-3px_0_0_#eadfca]"
-        aria-hidden="true"
-      />
-      {/* The front cover. */}
-      <span className="absolute top-0 right-[6%] bottom-[4.5%] left-0 block overflow-hidden rounded-[5%_11%_11%_5%/3.500%_7.500%_7.500%_3.500%] border-2 border-ink bg-stone-200">
-        {src && !broken ? (
-          <>
-            {oddShape && (
-              // eslint-disable-next-line @next/next/no-img-element
+    <div className={`relative [container-type:inline-size] ${className}`}>
+      <span className="absolute inset-0 block rounded-[9%/6%] border-2 border-ink bg-white p-[2.2cqw] shadow-[2.4cqw_3.2cqw_0_0_var(--color-ink)]">
+        <span className="relative block h-full w-full overflow-hidden rounded-[6.5%/4.3%] bg-stone-200">
+          {src && !broken ? (
+            <>
+              {oddShape && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={src}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full scale-125 object-cover opacity-80 blur-md"
+                />
+              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
+                key={src}
                 src={src}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full scale-125 object-cover opacity-80 blur-md"
+                alt={`Cover of ${title}`}
+                onError={() => setFailedUrl(src)}
+                onLoad={(e) => {
+                  const { naturalWidth, naturalHeight } = e.currentTarget
+                  // Open Library answers with a 1×1 blank image when it has no cover.
+                  if (naturalWidth <= 1) {
+                    setFailedUrl(src)
+                    return
+                  }
+                  setOddShape(
+                    Math.abs(naturalWidth / naturalHeight - FRAME_RATIO) > RATIO_TOLERANCE
+                  )
+                }}
+                className={`relative h-full w-full ${oddShape ? 'object-contain' : 'object-cover'}`}
               />
-            )}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              key={src}
-              src={src}
-              alt={`Cover of ${title}`}
-              onError={() => setFailedUrl(src)}
-              onLoad={(e) => {
-                const { naturalWidth, naturalHeight } = e.currentTarget
-                // Open Library answers with a 1×1 blank image when it has no cover.
-                if (naturalWidth <= 1) {
-                  setFailedUrl(src)
-                  return
-                }
-                setOddShape(Math.abs(naturalWidth / naturalHeight - FRAME_RATIO) > RATIO_TOLERANCE)
-              }}
-              className={`relative h-full w-full ${oddShape ? 'object-contain' : 'object-cover'}`}
-            />
-          </>
-        ) : (
-          <GeneratedCover title={title} author={author} />
-        )}
-        {/* Spine shading, the crease beside it, and a soft highlight. */}
-        <span
-          className="pointer-events-none absolute inset-y-0 left-0 w-[9%] bg-gradient-to-r from-black/35 to-black/5"
-          aria-hidden="true"
-        />
-        <span
-          className="pointer-events-none absolute inset-y-0 left-[9%] w-[1.5%] bg-white/30"
-          aria-hidden="true"
-        />
-        <span
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/10"
-          aria-hidden="true"
-        />
+            </>
+          ) : (
+            <GeneratedCover title={title} author={author} />
+          )}
+        </span>
       </span>
     </div>
   )
