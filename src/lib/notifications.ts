@@ -67,23 +67,59 @@ async function loadMembers(admin: Admin): Promise<Member[]> {
  * sent, or if the log table isn't there yet — without the log there's no way
  * to prevent repeats, so nothing is sent until the migration has been run.
  */
-async function claim(admin: Admin, kind: string, bookId: string, subjectKey = ''): Promise<boolean> {
-  const { error } = await admin
+async function claim(
+  admin: Admin,
+  kind: string,
+  bookId: string,
+  subjectKey = ''
+): Promise<string | null> {
+  const { data, error } = await admin
     .from('email_log')
     .insert({ kind, book_id: bookId, subject_key: subjectKey })
-  if (!error) return true
-  if (error.code !== '23505') {
+    .select('id')
+    .single()
+  if (!error && data) return data.id as string
+  if (error && error.code !== '23505') {
     console.warn(`[notifications] not sending "${kind}": ${error.message}`)
   }
-  return false
+  return null
 }
 
-async function sendToAll(recipients: Member[], build: (member: Member) => { subject: string; text: string; html: string }) {
-  await Promise.allSettled(
+/**
+ * Sends one email per recipient and writes the result back to the log row,
+ * so a failed send shows up on the profile page rather than vanishing.
+ */
+async function sendToAll(
+  admin: Admin,
+  logId: string,
+  recipients: Member[],
+  build: (member: Member) => { subject: string; text: string; html: string }
+) {
+  const results = await Promise.allSettled(
     recipients
       .filter((m) => m.wantsEmail)
       .map((m) => sendEmail({ to: m.email, ...build(m) }))
   )
+
+  const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+  const reason = failures[0]
+    ? String(failures[0].reason instanceof Error ? failures[0].reason.message : failures[0].reason)
+    : null
+  if (failures.length > 0) {
+    console.error(`[notifications] ${failures.length} of ${results.length} emails failed: ${reason}`)
+  }
+
+  // These columns come from a later migration; if it hasn't been run the
+  // update fails harmlessly and the email has still gone out.
+  const { error } = await admin
+    .from('email_log')
+    .update({
+      sent_count: results.length - failures.length,
+      failed_count: failures.length,
+      error: reason ? reason.slice(0, 300) : null,
+    })
+    .eq('id', logId)
+  if (error) console.warn(`[notifications] couldn't record the outcome: ${error.message}`)
 }
 
 /** Email 1: the club has a new book. Goes to everyone except whoever started it. */
@@ -94,7 +130,8 @@ export async function notifyBookStarted(bookId: string, actorId: string | null, 
 
   const { data: book } = await admin.from('books').select('*').eq('id', bookId).maybeSingle()
   if (!book || book.status !== 'reading') return
-  if (!(await claim(admin, 'book_started', bookId))) return
+  const logId = await claim(admin, 'book_started', bookId)
+  if (!logId) return
 
   const members = await loadMembers(admin)
   const picker = members.find((m) => m.id === book.picked_by)
@@ -116,12 +153,14 @@ export async function notifyBookStarted(bookId: string, actorId: string | null, 
   ]
 
   await sendToAll(
+    admin,
+    logId,
     members.filter((m) => m.id !== actorId),
     () => ({ subject: `New book: ${book.title}`, ...layout(`Next up: ${book.title}`, paragraphs, { href: siteUrl, label: 'Open Book Club' }) })
   )
 }
 
-/** Email 2: someone finished the current book. Goes to everyone else. */
+/** Email 2: someone finished the current book. Goes to everyone, finisher included. */
 export async function notifyFinished(bookId: string, finisherId: string, siteUrl: string) {
   if (!canNotify()) return
   const admin = createAdminClient()
@@ -133,7 +172,8 @@ export async function notifyFinished(bookId: string, finisherId: string, siteUrl
   ])
   if (!book) return
   // Un-clicking and re-clicking the button must not email everyone again.
-  if (!(await claim(admin, 'finished', bookId, finisherId))) return
+  const logId = await claim(admin, 'finished', bookId, finisherId)
+  if (!logId) return
 
   const members = await loadMembers(admin)
   const finisher = members.find((m) => m.id === finisherId)
@@ -145,8 +185,25 @@ export async function notifyFinished(bookId: string, finisherId: string, siteUrl
   const place = finishedIds.size
 
   await sendToAll(
-    members.filter((m) => m.id !== finisherId),
+    admin,
+    logId,
+    // Everyone, including the finisher — theirs is a confirmation that the
+    // rest of the club has been told.
+    members,
     (member) => {
+      if (member.id === finisherId) {
+        const subject = `You finished ${book.title}`
+        const paragraphs = [
+          place === 1
+            ? `You're the first to finish “${book.title}”. Bragging rights secured.`
+            : `You've finished “${book.title}” — number ${place} of ${members.length} across the line.`,
+          stillReading.length > 0
+            ? `Everyone else has been told. Still reading: ${stillReading.map((m) => m.name).join(', ')}.`
+            : 'That’s everyone. Time to pick a date to talk about it.',
+        ]
+        return { subject, ...layout(subject, paragraphs, { href: siteUrl, label: 'See the finish line' }) }
+      }
+
       const isReading = stillReading.some((m) => m.id === member.id)
       const lastOneLeft = isReading && stillReading.length === 1
 
@@ -235,7 +292,8 @@ export async function notifyLastToRate(siteUrl: string): Promise<number> {
     const straggler = missing[0]
     // At most one nudge per person per day.
     if (nudged.has(straggler.id) || !straggler.wantsEmail) continue
-    if (!(await claim(admin, 'last_to_rate', book.id, straggler.id))) continue
+    const logId = await claim(admin, 'last_to_rate', book.id, straggler.id)
+    if (!logId) continue
     nudged.add(straggler.id)
 
     const paragraphs = [
@@ -243,7 +301,7 @@ export async function notifyLastToRate(siteUrl: string): Promise<number> {
       'It takes ten seconds: a score out of 10, or tick “I didn’t finish this one” and own it.',
     ]
     const subject = `You're the only one who hasn't rated ${book.title}`
-    await sendToAll([straggler], () => ({
+    await sendToAll(admin, logId, [straggler], () => ({
       subject,
       ...layout(subject, paragraphs, { href: `${siteUrl}/books/${book.id}`, label: 'Rate it now' }),
     }))

@@ -59,6 +59,7 @@ haven't yet:
 - `add_did_not_finish.sql` — lets a member mark a book "did not finish" instead of rating it
 - `add_half_point_ratings.sql` — allows ratings in half-point steps (7.5)
 - `add_email_notifications.sql` — email on/off switch per member, and the log that stops repeat emails
+- `add_email_log_outcome.sql` — records how many of each email were sent or failed (shown on the profile page)
 
 ## 8. Keeping Supabase awake
 

@@ -123,8 +123,8 @@ export function EmailToggle({ enabled }: { enabled: boolean }) {
         <span>
           <span className="block text-sm font-medium text-stone-900">Email me club updates</span>
           <span className="block text-sm text-stone-500">
-            Only three things: a new book starts, someone finishes the current book, or
-            you&apos;re the last one who hasn&apos;t rated.
+            Only three things: a new book starts, someone finishes the current book (you
+            get a confirmation when it&apos;s you), or you&apos;re the last one who hasn&apos;t rated.
           </span>
         </span>
       </label>

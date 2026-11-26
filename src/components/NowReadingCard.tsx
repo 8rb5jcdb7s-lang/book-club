@@ -318,7 +318,7 @@ export default function NowReadingCard({
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t-2 border-dashed border-stone-200 pt-4">
           {currentUserId && <FinishButton bookId={book.id} isFinished={iFinished} />}
           {!iFinished && currentUserId && (
-            <span className="text-xs text-stone-500">Emails everyone that you&apos;re done.</span>
+            <span className="text-xs text-stone-500">Emails the whole club that you&apos;re done.</span>
           )}
           <div className="flex items-center gap-2 sm:ml-auto">
             <ConfirmActionButton
