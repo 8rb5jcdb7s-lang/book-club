@@ -1,6 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { emailConfigured, sendEmail } from '@/lib/email'
 import { daysBetween, formatDate, todayStr } from '@/lib/dates'
+import {
+  renderBookEmail,
+  renderFinishLineEmail,
+  type FinishLineEmail,
+} from '@/lib/emailTemplates'
 
 // The club only gets three kinds of email, each at most once per book (and
 // per person where it's about a person):
@@ -10,7 +15,13 @@ import { daysBetween, formatDate, todayStr } from '@/lib/dates'
 //      for a couple of days (checked by the daily cron, not on the spot)
 
 type Admin = NonNullable<ReturnType<typeof createAdminClient>>
-type Member = { id: string; name: string; email: string; wantsEmail: boolean }
+type Member = {
+  id: string
+  name: string
+  email: string
+  wantsEmail: boolean
+  avatarUrl: string | null
+}
 
 /**
  * On the live site, do nothing at all until Gmail is set up — otherwise an
@@ -21,27 +32,104 @@ function canNotify(): boolean {
   return emailConfigured() || process.env.NODE_ENV !== 'production'
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 function pick<T>(options: T[]): T {
   return options[Math.floor(Math.random() * options.length)]
 }
 
-function layout(title: string, paragraphs: string[], link: { href: string; label: string }) {
-  const text = [title, '', ...paragraphs, '', `${link.label}: ${link.href}`, '', '—', 'Book Club. Turn these emails off on your profile page.'].join('\n')
-  const html = `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:24px;color:#1c1917">
-  <h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(title)}</h1>
-  ${paragraphs.map((p) => `<p style="font-size:16px;line-height:1.5;margin:0 0 12px">${escapeHtml(p)}</p>`).join('\n  ')}
-  <p style="margin:20px 0"><a href="${escapeHtml(link.href)}" style="background:#1c1917;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-family:Arial,sans-serif;font-size:14px;font-weight:bold">${escapeHtml(link.label)}</a></p>
-  <p style="font-family:Arial,sans-serif;font-size:12px;color:#78716c;margin:24px 0 0">Book Club · You can turn these emails off on your profile page.</p>
-</div>`
-  return { text, html }
+/** The plain-text version that goes alongside every HTML email. */
+function plainText(title: string, paragraphs: string[], link: { href: string; label: string }): string {
+  return [
+    title,
+    '',
+    ...paragraphs,
+    '',
+    `${link.label}: ${link.href}`,
+    '',
+    '—',
+    'Book Club. Turn these emails off on your profile page.',
+  ].join('\n')
+}
+
+type BookRow = {
+  id: string
+  title: string
+  author: string | null
+  cover_url: string | null
+  date_started: string | null
+  target_finish_date: string | null
+}
+
+/** Everything the finish-line card shows, apart from the words above it. */
+function finishLineData(
+  book: BookRow,
+  members: Member[],
+  finishes: { user_id: string; finished_at: string }[]
+): Pick<FinishLineEmail, 'book' | 'startDate' | 'targetDate' | 'today' | 'finishers' | 'stillReading'> {
+  const ordered = [...finishes].sort((a, b) => a.finished_at.localeCompare(b.finished_at))
+  const finishers = ordered.flatMap((f) => {
+    const member = members.find((m) => m.id === f.user_id)
+    return member
+      ? [
+          {
+            name: member.name,
+            avatarUrl: member.avatarUrl,
+            finishedDate: todayStr(new Date(f.finished_at)),
+          },
+        ]
+      : []
+  })
+  const finishedIds = new Set(ordered.map((f) => f.user_id))
+  return {
+    book: { title: book.title, author: book.author, coverUrl: book.cover_url },
+    startDate: book.date_started,
+    targetDate: book.target_finish_date,
+    today: todayStr(),
+    finishers,
+    stillReading: members
+      .filter((m) => !finishedIds.has(m.id))
+      .map((m) => ({ name: m.name, avatarUrl: m.avatarUrl })),
+  }
+}
+
+/**
+ * The finish-line email for whichever book the club is reading (or, failing
+ * that, the one it finished most recently) — used by the "send me a test
+ * email" button so the real layout can be checked in a real inbox.
+ */
+export async function renderSampleEmail(siteUrl: string): Promise<{ text: string; html: string }> {
+  const headline = 'This is a Book Club test email'
+  const paragraphs = [
+    'It works. This is what you get when someone presses “I finished it!” — the finish line as it stands right now.',
+  ]
+  const button = { href: siteUrl, label: 'Open Book Club' }
+  const text = plainText(headline, paragraphs, button)
+
+  const admin = createAdminClient()
+  if (admin) {
+    const { data: books } = await admin
+      .from('books')
+      .select('*')
+      .in('status', ['reading', 'finished'])
+      .order('date_started', { ascending: false, nullsFirst: false })
+      .limit(10)
+    const book = (books ?? []).find((b) => b.status === 'reading') ?? (books ?? [])[0]
+    if (book) {
+      const [members, { data: finishes }] = await Promise.all([
+        loadMembers(admin),
+        admin.from('book_finishes').select('user_id, finished_at').eq('book_id', book.id),
+      ])
+      return {
+        text,
+        html: renderFinishLineEmail({
+          headline,
+          paragraphs,
+          button,
+          ...finishLineData(book as BookRow, members, finishes ?? []),
+        }),
+      }
+    }
+  }
+  return { text, html: renderBookEmail({ headline, paragraphs, button }) }
 }
 
 async function loadMembers(admin: Admin): Promise<Member[]> {
@@ -58,6 +146,7 @@ async function loadMembers(admin: Admin): Promise<Member[]> {
       email: emails.get(p.id) ?? '',
       // The column comes from a migration; before it exists, everyone is in.
       wantsEmail: p.email_notifications !== false,
+      avatarUrl: (p.avatar_url as string | null) ?? null,
     }))
     .filter((m) => m.email)
 }
@@ -152,11 +241,26 @@ export async function notifyBookStarted(bookId: string, actorId: string | null, 
     'When you finish, hit “I finished it!” on the site so everyone else feels the pressure.',
   ]
 
+  const headline = `Next up: ${book.title}`
+  const button = { href: siteUrl, label: 'Open Book Club' }
+  const html = renderBookEmail({
+    headline,
+    paragraphs,
+    button,
+    book: { title: book.title, author: book.author, coverUrl: book.cover_url },
+    eyebrow: 'New book',
+    tag: book.target_finish_date
+      ? { label: `Finish by ${formatDate(book.target_finish_date, { withYear: false })}` }
+      : picker
+        ? { label: `Picked by ${picker.name}` }
+        : null,
+  })
+
   await sendToAll(
     admin,
     logId,
     members.filter((m) => m.id !== actorId),
-    () => ({ subject: `New book: ${book.title}`, ...layout(`Next up: ${book.title}`, paragraphs, { href: siteUrl, label: 'Open Book Club' }) })
+    () => ({ subject: `New book: ${book.title}`, text: plainText(headline, paragraphs, button), html })
   )
 }
 
@@ -168,7 +272,7 @@ export async function notifyFinished(bookId: string, finisherId: string, siteUrl
 
   const [{ data: book }, { data: finishes }] = await Promise.all([
     admin.from('books').select('*').eq('id', bookId).maybeSingle(),
-    admin.from('book_finishes').select('user_id').eq('book_id', bookId),
+    admin.from('book_finishes').select('user_id, finished_at').eq('book_id', bookId),
   ])
   if (!book) return
   // Un-clicking and re-clicking the button must not email everyone again.
@@ -179,8 +283,12 @@ export async function notifyFinished(bookId: string, finisherId: string, siteUrl
   const finisher = members.find((m) => m.id === finisherId)
   if (!finisher) return
 
-  const finishedIds = new Set((finishes ?? []).map((f) => f.user_id as string))
-  finishedIds.add(finisherId)
+  // The finish that triggered this may not be in the query result yet.
+  const allFinishes = (finishes ?? []).some((f) => f.user_id === finisherId)
+    ? (finishes ?? [])
+    : [...(finishes ?? []), { user_id: finisherId, finished_at: new Date().toISOString() }]
+  const finishedIds = new Set(allFinishes.map((f) => f.user_id as string))
+  const card = finishLineData(book as BookRow, members, allFinishes)
   const stillReading = members.filter((m) => !finishedIds.has(m.id))
   const place = finishedIds.size
 
@@ -201,7 +309,12 @@ export async function notifyFinished(bookId: string, finisherId: string, siteUrl
             ? `Everyone else has been told. Still reading: ${stillReading.map((m) => m.name).join(', ')}.`
             : 'That’s everyone. Time to pick a date to talk about it.',
         ]
-        return { subject, ...layout(subject, paragraphs, { href: siteUrl, label: 'See the finish line' }) }
+        const button = { href: siteUrl, label: 'See the finish line' }
+        return {
+          subject,
+          text: plainText(subject, paragraphs, button),
+          html: renderFinishLineEmail({ headline: subject, paragraphs, button, ...card }),
+        }
       }
 
       const isReading = stillReading.some((m) => m.id === member.id)
@@ -241,7 +354,12 @@ export async function notifyFinished(bookId: string, finisherId: string, siteUrl
       const subject = lastOneLeft
         ? `You're the last one reading ${book.title}`
         : `${finisher.name} finished ${book.title}`
-      return { subject, ...layout(subject, paragraphs, { href: siteUrl, label: isReading ? 'I finished it too' : 'See the finish line' }) }
+      const button = { href: siteUrl, label: isReading ? 'I finished it too' : 'See the finish line' }
+      return {
+        subject,
+        text: plainText(subject, paragraphs, button),
+        html: renderFinishLineEmail({ headline: subject, paragraphs, button, ...card }),
+      }
     }
   )
 }
@@ -301,9 +419,19 @@ export async function notifyLastToRate(siteUrl: string): Promise<number> {
       'It takes ten seconds: a score out of 10, or tick “I didn’t finish this one” and own it.',
     ]
     const subject = `You're the only one who hasn't rated ${book.title}`
+    const button = { href: `${siteUrl}/books/${book.id}`, label: 'Rate it now' }
+    const html = renderBookEmail({
+      headline: subject,
+      paragraphs,
+      button,
+      book: { title: book.title, author: book.author, coverUrl: book.cover_url },
+      eyebrow: 'Waiting on your rating',
+      tag: { label: `${members.length - 1} of ${members.length} have rated` },
+    })
     await sendToAll(admin, logId, [straggler], () => ({
       subject,
-      ...layout(subject, paragraphs, { href: `${siteUrl}/books/${book.id}`, label: 'Rate it now' }),
+      text: plainText(subject, paragraphs, button),
+      html,
     }))
     sent += 1
   }

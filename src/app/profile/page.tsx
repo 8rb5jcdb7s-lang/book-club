@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logout } from '@/app/logout/actions'
 import { CLUB_TIME_ZONE } from '@/lib/dates'
 import AvatarUploader from '@/components/AvatarUploader'
+import ScoreBadge from '@/components/ScoreBadge'
 import {
   DisplayNameForm,
   EmailToggle,
@@ -55,6 +57,27 @@ export default async function ProfilePage() {
     recentEmails = (data as unknown as EmailLogRow[] | null) ?? []
   }
 
+  // Every book this member has rated, best first; unfinished ones at the end.
+  type MyRating = {
+    id: string
+    rating: number | null
+    did_not_finish?: boolean | null
+    book: { id: string; title: string; author: string | null } | null
+  }
+  const { data: ratingRows } = await supabase
+    .from('ratings_notes')
+    .select('*, book:books(id, title, author)')
+    .eq('user_id', user.id)
+  const myRatings = ((ratingRows as unknown as MyRating[] | null) ?? []).filter((r) => r.book)
+  const ranked = myRatings
+    .filter((r) => r.rating !== null)
+    .sort(
+      (a, b) =>
+        (b.rating as number) - (a.rating as number) ||
+        a.book!.title.localeCompare(b.book!.title)
+    )
+  const unfinished = myRatings.filter((r) => r.rating === null && r.did_not_finish)
+
   const displayName = profile?.display_name ?? user.email?.split('@')[0] ?? 'Member'
 
   return (
@@ -68,6 +91,61 @@ export default async function ProfilePage() {
         <AvatarUploader userId={user.id} name={displayName} url={profile?.avatar_url ?? null} />
         <hr className="border-stone-100" />
         <DisplayNameForm displayName={displayName} />
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="section-title">Your ratings</h2>
+          {ranked.length > 0 && (
+            <p className="text-sm text-stone-500">
+              {ranked.length} rated · average{' '}
+              {(ranked.reduce((sum, r) => sum + (r.rating as number), 0) / ranked.length).toFixed(1)}
+            </p>
+          )}
+        </div>
+        {ranked.length === 0 && unfinished.length === 0 ? (
+          <p className="mt-3 text-sm text-stone-500">
+            You haven&apos;t rated anything yet. Open a book from History to give it a score.
+          </p>
+        ) : (
+          <ol className="mt-4 space-y-2">
+            {ranked.map((r, i) => (
+              <li key={r.id}>
+                <Link
+                  href={`/books/${r.book!.id}`}
+                  className="group flex items-center gap-3 rounded-2xl border-2 border-ink bg-white px-3 py-2 shadow-[0_3px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5"
+                >
+                  <span className="w-6 shrink-0 text-center font-serif text-lg font-semibold text-stone-400 tabular-nums">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-serif font-semibold text-ink group-hover:underline">
+                      {r.book!.title}
+                    </span>
+                    {r.book!.author && (
+                      <span className="block truncate text-xs text-stone-500">{r.book!.author}</span>
+                    )}
+                  </span>
+                  <ScoreBadge rating={r.rating as number} size="sm" decimals={0} />
+                </Link>
+              </li>
+            ))}
+            {unfinished.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={`/books/${r.book!.id}`}
+                  className="group flex items-center gap-3 rounded-2xl border-2 border-dashed border-stone-300 bg-white px-3 py-2"
+                >
+                  <span className="w-6 shrink-0 text-center text-stone-300">–</span>
+                  <span className="min-w-0 flex-1 truncate font-serif font-semibold text-stone-600 group-hover:underline">
+                    {r.book!.title}
+                  </span>
+                  <span className="chip bg-stone-200">Did not finish</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       <section className="card space-y-3 p-5 sm:p-6">

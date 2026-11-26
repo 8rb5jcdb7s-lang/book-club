@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { emailConfigured, sendEmail } from '@/lib/email'
+import { renderSampleEmail } from '@/lib/notifications'
+import { getSiteUrl } from '@/lib/siteUrl'
 
 export type ProfileFormState = { error?: string; saved?: boolean } | undefined
 
@@ -114,12 +116,8 @@ export async function sendTestEmail(): Promise<TestEmailResult> {
   }
 
   try {
-    await sendEmail({
-      to: user.email,
-      subject: 'Book Club test email',
-      text: 'It works. This is what Book Club emails will look like when someone starts a book or finishes one.',
-      html: '<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:24px;color:#1c1917"><h1 style="font-size:22px;margin:0 0 12px">It works</h1><p style="font-size:16px;line-height:1.5">This is what Book Club emails will look like when someone starts a book or finishes one.</p></div>',
-    })
+    const sample = await renderSampleEmail(await getSiteUrl())
+    await sendEmail({ to: user.email, subject: 'Book Club test email', ...sample })
   } catch (e) {
     const reason = e instanceof Error ? e.message : 'Unknown error'
     return { ok: false, message: `Gmail refused to send: ${reason.slice(0, 200)}` }

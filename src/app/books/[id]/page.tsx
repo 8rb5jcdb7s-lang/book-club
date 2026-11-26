@@ -6,6 +6,7 @@ import { formatDate } from '@/lib/dates'
 import { daysTaken, daysToFinish, historicalPace } from '@/lib/pace'
 import { amazonUrl, goodreadsUrl } from '@/lib/bookLinks'
 import { pickQueue } from '@/lib/picks'
+import Avatar from '@/components/Avatar'
 import BookCover from '@/components/BookCover'
 import NotesList from '@/components/NotesList'
 import PickerSelect from '@/components/PickerSelect'
@@ -167,6 +168,42 @@ export default async function BookDetailPage({
                 </div>
               ))}
             </dl>
+          )}
+
+          {(members ?? []).length > 0 && book.status !== 'queued' && (
+            <div>
+              <p className="text-xs font-medium tracking-wide text-stone-400 uppercase">
+                Everyone&apos;s rating
+              </p>
+              <ul className="mt-1.5 flex flex-wrap gap-2">
+                {(members ?? []).map((member) => {
+                  const theirs = notes.find((rn) => rn.user_id === member.id)
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex items-center gap-2 rounded-full border-2 border-ink bg-white py-1 pr-2 pl-1"
+                    >
+                      <Avatar
+                        name={member.display_name}
+                        url={member.avatar_url}
+                        size={7}
+                        showTooltip={false}
+                      />
+                      <span className="max-w-28 truncate text-sm font-bold text-ink">
+                        {member.display_name}
+                      </span>
+                      {theirs?.rating != null ? (
+                        <ScoreBadge rating={theirs.rating} size="sm" decimals={0} />
+                      ) : theirs?.did_not_finish ? (
+                        <span className="chip bg-stone-200 px-2 text-[11px]">DNF</span>
+                      ) : (
+                        <span className="px-1.5 text-xs font-bold text-stone-400">not yet</span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
           )}
 
           {book.synopsis && (
