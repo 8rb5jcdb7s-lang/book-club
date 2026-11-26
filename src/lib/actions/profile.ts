@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { emailConfigured, sendEmail } from '@/lib/email'
 
 export type ProfileFormState = { error?: string; saved?: boolean } | undefined
 
@@ -88,4 +90,56 @@ export async function setEmailNotifications(enabled: boolean): Promise<ProfileFo
 
   revalidatePath('/', 'layout')
   return { saved: true }
+}
+
+export type TestEmailResult = { ok: boolean; message: string }
+
+/**
+ * Sends a test email to the signed-in member's own address and reports what,
+ * if anything, is still missing from the email setup.
+ */
+export async function sendTestEmail(): Promise<TestEmailResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.email) return { ok: false, message: 'Not signed in.' }
+
+  if (!emailConfigured()) {
+    return {
+      ok: false,
+      message:
+        'The site has no Gmail login yet: GMAIL_USER and GMAIL_APP_PASSWORD need to be set in Vercel, followed by a redeploy.',
+    }
+  }
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Book Club test email',
+      text: 'It works. This is what Book Club emails will look like when someone starts a book or finishes one.',
+      html: '<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:24px;color:#1c1917"><h1 style="font-size:22px;margin:0 0 12px">It works</h1><p style="font-size:16px;line-height:1.5">This is what Book Club emails will look like when someone starts a book or finishes one.</p></div>',
+    })
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : 'Unknown error'
+    return { ok: false, message: `Gmail refused to send: ${reason.slice(0, 200)}` }
+  }
+
+  // The automatic emails also need the secret key and the email log table.
+  const admin = createAdminClient()
+  if (!admin) {
+    return {
+      ok: false,
+      message: `Test email sent to ${user.email}, but SUPABASE_SECRET_KEY is missing in Vercel, so automatic emails won't go out.`,
+    }
+  }
+  const { error } = await admin.from('email_log').select('id').limit(1)
+  if (error) {
+    return {
+      ok: false,
+      message: `Test email sent to ${user.email}, but the email log table isn't there yet (run add_email_notifications.sql), so automatic emails won't go out.`,
+    }
+  }
+
+  return { ok: true, message: `Sent to ${user.email}. Everything is set up.` }
 }

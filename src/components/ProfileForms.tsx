@@ -3,9 +3,11 @@
 import { useActionState, useState, useTransition } from 'react'
 import {
   changePassword,
+  sendTestEmail,
   setEmailNotifications,
   updateDisplayName,
   type ProfileFormState,
+  type TestEmailResult,
 } from '@/lib/actions/profile'
 
 function Status({ state, savedText }: { state: ProfileFormState; savedText: string }) {
@@ -127,6 +129,32 @@ export function EmailToggle({ enabled }: { enabled: boolean }) {
         </span>
       </label>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    </div>
+  )
+}
+
+export function TestEmailButton() {
+  const [isPending, startTransition] = useTransition()
+  const [result, setResult] = useState<TestEmailResult | null>(null)
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => startTransition(async () => setResult(await sendTestEmail()))}
+        className="btn btn-secondary btn-sm"
+      >
+        {isPending ? 'Sending…' : 'Send me a test email'}
+      </button>
+      {result && (
+        <p
+          role="status"
+          className={`text-sm ${result.ok ? 'font-medium text-emerald-700' : 'text-red-600'}`}
+        >
+          {result.message}
+        </p>
+      )}
     </div>
   )
 }

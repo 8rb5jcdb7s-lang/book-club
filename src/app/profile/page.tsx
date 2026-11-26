@@ -3,7 +3,12 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/logout/actions'
 import AvatarUploader from '@/components/AvatarUploader'
-import { DisplayNameForm, EmailToggle, PasswordForm } from '@/components/ProfileForms'
+import {
+  DisplayNameForm,
+  EmailToggle,
+  PasswordForm,
+  TestEmailButton,
+} from '@/components/ProfileForms'
 
 export const metadata: Metadata = { title: 'Your profile' }
 
@@ -38,6 +43,7 @@ export default async function ProfilePage() {
       <section className="card space-y-3 p-5 sm:p-6">
         <h2 className="section-title">Emails</h2>
         <EmailToggle enabled={profile?.email_notifications !== false} />
+        <TestEmailButton />
       </section>
 
       <section className="card space-y-3 p-5 sm:p-6">
