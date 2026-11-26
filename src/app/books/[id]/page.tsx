@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/dates'
-import { daysTaken, historicalPace } from '@/lib/pace'
+import { daysTaken, daysToFinish, historicalPace } from '@/lib/pace'
 import { pickQueue } from '@/lib/picks'
 import BookCover from '@/components/BookCover'
 import NotesList from '@/components/NotesList'
@@ -37,6 +37,7 @@ export default async function BookDetailPage({
     { data: ratingsNotes },
     { data: quotes },
     { data: members },
+    { data: finishes },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase
@@ -55,6 +56,11 @@ export default async function BookDetailPage({
       .eq('book_id', id)
       .order('created_at', { ascending: true }),
     supabase.from('profiles').select('*').order('display_name'),
+    supabase
+      .from('book_finishes')
+      .select('user_id, finished_at')
+      .eq('book_id', id)
+      .order('finished_at', { ascending: true }),
   ])
 
   if (!book) notFound()
@@ -98,6 +104,18 @@ export default async function BookDetailPage({
   })
   if (book.date_started) facts.push({ label: 'Started', value: formatDate(book.date_started) })
   if (book.date_finished) facts.push({ label: 'Finished', value: formatDate(book.date_finished) })
+  if (finishes && finishes.length > 0) {
+    const nameOf = new Map((members ?? []).map((m) => [m.id, m.display_name]))
+    facts.push({
+      label: 'Finish order',
+      value: finishes
+        .map((f) => {
+          const took = daysToFinish(book.date_started, f.finished_at)
+          return `${nameOf.get(f.user_id) ?? 'Unknown'}${took !== null ? ` (${took}d)` : ''}`
+        })
+        .join(' → '),
+    })
+  }
   if (days && pace) {
     facts.push({
       label: 'Read in',

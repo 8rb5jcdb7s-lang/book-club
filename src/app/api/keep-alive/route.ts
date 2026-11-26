@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import { notifyLastToRate } from '@/lib/notifications'
 
-// Supabase pauses free-tier projects after 7 days without activity.
-// Vercel Cron calls this route once a day (see vercel.json) so the database
-// always sees traffic, even when nobody opens the app for a while.
+// Called once a day by Vercel Cron (see vercel.json). Two jobs:
+//  1. Keep Supabase awake: free-tier projects pause after 7 days without
+//     activity, so this makes sure the database always sees traffic.
+//  2. Send the "you're the only one who hasn't rated" nudge, which waits a
+//     couple of days and so can't be sent at the moment someone rates.
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
@@ -26,5 +29,18 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, error: error.message }, { status: 503 })
   }
 
-  return Response.json({ ok: true, at: new Date().toISOString() })
+  // A failed nudge must never make the keep-alive look broken.
+  let nudges = 0
+  try {
+    const configured = process.env.NEXT_PUBLIC_SITE_URL
+    const siteUrl =
+      configured && !/localhost|127\.0\.0\.1/.test(configured)
+        ? configured.replace(/\/$/, '')
+        : new URL(request.url).origin
+    nudges = await notifyLastToRate(siteUrl)
+  } catch (e) {
+    console.error('[keep-alive] nudge check failed', e)
+  }
+
+  return Response.json({ ok: true, at: new Date().toISOString(), nudges })
 }

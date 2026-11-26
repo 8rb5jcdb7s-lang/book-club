@@ -31,8 +31,11 @@ export default function RatingInput({
 
   return (
     <form
-      // Submitted by hand (rather than via `action`) so React doesn't reset
-      // the form afterwards, which would visually untick the checkbox.
+      // `action` is the fallback if Save is pressed before the page's scripts
+      // have loaded. Normally onSubmit takes over and submits by hand, so
+      // React doesn't reset the form afterwards (which would visually untick
+      // the checkbox).
+      action={formAction}
       onSubmit={(e) => {
         e.preventDefault()
         const formData = new FormData(e.currentTarget)

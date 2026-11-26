@@ -1,7 +1,7 @@
 import { daysBetween, yearOf } from './dates'
-import { daysTaken, historicalPace } from './pace'
+import { daysTaken, daysToFinish, historicalPace } from './pace'
 import { WORDS_PER_PAGE } from './wordCount'
-import type { Book, Profile, Quote, RatingNote } from './types'
+import type { Book, BookFinish, Profile, Quote, RatingNote } from './types'
 
 /** Finished books with enough data to compute a reading pace. */
 function finishedWithPace(books: Book[]): Book[] {
@@ -45,8 +45,6 @@ export function totalWordsInYear(books: Book[], year: number): number {
   for (const book of books) {
     if (book.status === 'finished' && book.date_finished) {
       if (yearOf(book.date_finished) === year) pages += book.page_count ?? 0
-    } else if (book.status === 'reading') {
-      pages += book.pages_read_so_far
     }
   }
 
@@ -401,4 +399,105 @@ export function mostAbandoned(
     if (count > 0 && (!best || count > best.count)) best = { book, count }
   }
   return best
+}
+
+export type FinishSummary = {
+  profile: Profile
+  /** Books this member marked as finished. */
+  finishCount: number
+  /** Times they were first / last across the line (books with 2+ finishers). */
+  firsts: number
+  lasts: number
+  averageDays: number | null
+  fastest: { book: Book; days: number } | null
+}
+
+/**
+ * Race stats from the "I finished it!" button: who tends to finish first,
+ * who brings up the rear, and how long each person usually takes.
+ */
+export function finishSummaries(
+  books: Book[],
+  finishes: BookFinish[],
+  profiles: Profile[]
+): FinishSummary[] {
+  const bookMap = new Map(books.map((b) => [b.id, b]))
+  const byBook = new Map<string, BookFinish[]>()
+  for (const finish of finishes) {
+    if (!bookMap.has(finish.book_id)) continue
+    const list = byBook.get(finish.book_id) ?? []
+    list.push(finish)
+    byBook.set(finish.book_id, list)
+  }
+
+  const firsts = new Map<string, number>()
+  const lasts = new Map<string, number>()
+  for (const list of byBook.values()) {
+    if (list.length < 2) continue
+    const ordered = [...list].sort((a, b) => a.finished_at.localeCompare(b.finished_at))
+    const first = ordered[0].user_id
+    const last = ordered[ordered.length - 1].user_id
+    firsts.set(first, (firsts.get(first) ?? 0) + 1)
+    lasts.set(last, (lasts.get(last) ?? 0) + 1)
+  }
+
+  return profiles
+    .map((profile) => {
+      const mine = finishes
+        .filter((f) => f.user_id === profile.id && bookMap.has(f.book_id))
+        .map((f) => {
+          const book = bookMap.get(f.book_id)!
+          return { book, days: daysToFinish(book.date_started, f.finished_at) }
+        })
+      const timed = mine.filter((x): x is { book: Book; days: number } => x.days !== null)
+      const fastest = [...timed].sort((a, b) => a.days - b.days)[0] ?? null
+
+      return {
+        profile,
+        finishCount: mine.length,
+        firsts: firsts.get(profile.id) ?? 0,
+        lasts: lasts.get(profile.id) ?? 0,
+        averageDays: timed.length ? average(timed.map((x) => x.days)) : null,
+        fastest,
+      }
+    })
+    .filter((summary) => summary.finishCount > 0)
+    .sort(
+      (a, b) =>
+        b.firsts - a.firsts ||
+        (a.averageDays ?? Infinity) - (b.averageDays ?? Infinity) ||
+        a.profile.display_name.localeCompare(b.profile.display_name)
+    )
+}
+
+/**
+ * The highest-rated finished books, best first. Ties go to the book with more
+ * ratings, then to the one finished most recently.
+ */
+export function topRated<T extends Pick<Book, 'id' | 'status' | 'date_finished'>>(
+  books: T[],
+  ratingsNotes: Pick<RatingNote, 'book_id' | 'rating'>[],
+  limit = 3
+): { book: T; average: number; ratingCount: number }[] {
+  const byBook = new Map<string, number[]>()
+  for (const rn of ratingsNotes) {
+    if (rn.rating === null) continue
+    const list = byBook.get(rn.book_id) ?? []
+    list.push(rn.rating)
+    byBook.set(rn.book_id, list)
+  }
+
+  return books
+    .filter((b) => b.status === 'finished' && byBook.has(b.id))
+    .map((book) => {
+      const ratings = byBook.get(book.id)!
+      return { book, average: average(ratings), ratingCount: ratings.length }
+    })
+    .sort(
+      (a, b) =>
+        b.average - a.average ||
+        b.ratingCount - a.ratingCount ||
+        (b.book.date_finished ?? '').localeCompare(a.book.date_finished ?? '')
+    )
+    .slice(0, limit)
 }

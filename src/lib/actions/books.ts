@@ -1,10 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { lookupBook } from '@/lib/bookApi'
 import { todayStr } from '@/lib/dates'
+import { notifyBookStarted } from '@/lib/notifications'
+import { getSiteUrl } from '@/lib/siteUrl'
 import type { BookStatus } from '@/lib/types'
 
 export type BookFormState = { error?: string } | undefined
@@ -39,7 +42,6 @@ function readBookFields(formData: FormData) {
     date_started: str(formData, 'date_started'),
     date_finished: str(formData, 'date_finished'),
     target_finish_date: str(formData, 'target_finish_date'),
-    pages_read_so_far: Math.max(0, int(formData, 'pages_read_so_far') ?? 0),
     synopsis: str(formData, 'synopsis'),
     goodreads_id: str(formData, 'goodreads_id'),
     amazon_asin: str(formData, 'amazon_asin'),
@@ -70,6 +72,17 @@ function friendlyError(error: { message: string; code?: string }): string {
     return "Couldn't reach the database. Please try again in a moment."
   }
   return error.message
+}
+
+/** Emails the club about a newly started book, once the response has gone out. */
+async function announceBookStarted(supabase: Supabase, bookId: string) {
+  const [
+    {
+      data: { user },
+    },
+    siteUrl,
+  ] = await Promise.all([supabase.auth.getUser(), getSiteUrl()])
+  after(() => notifyBookStarted(bookId, user?.id ?? null, siteUrl).catch(console.error))
 }
 
 function revalidateAll() {
@@ -124,20 +137,25 @@ export async function createBook(
   const isReading = fields.status === 'reading'
   const previouslyActive = isReading ? await finishActiveBooks(supabase) : []
 
-  const { error } = await supabase.from('books').insert({
-    ...fields,
-    open_library_id: str(formData, 'open_library_id'),
-    date_started: fields.status === 'queued' ? null : fields.date_started,
-    date_finished:
-      fields.status === 'finished' ? (fields.date_finished ?? todayStr()) : null,
-    target_finish_date: isReading ? fields.target_finish_date : null,
-    pages_read_so_far: isReading ? fields.pages_read_so_far : 0,
-  })
+  const { data: created, error } = await supabase
+    .from('books')
+    .insert({
+      ...fields,
+      open_library_id: str(formData, 'open_library_id'),
+      date_started: fields.status === 'queued' ? null : fields.date_started,
+      date_finished:
+        fields.status === 'finished' ? (fields.date_finished ?? todayStr()) : null,
+      target_finish_date: isReading ? fields.target_finish_date : null,
+    })
+    .select('id')
+    .single()
 
   if (error) {
     await restoreActiveBooks(supabase, previouslyActive)
     return { error: friendlyError(error) }
   }
+
+  if (isReading && created) await announceBookStarted(supabase, created.id)
 
   revalidateAll()
   redirect(isReading ? '/' : fields.status === 'finished' ? '/books' : '/want-to-read')
@@ -188,7 +206,8 @@ export async function addToWantToRead(
  */
 export async function startReading(
   bookId: string,
-  pickedBy?: string | null
+  pickedBy?: string | null,
+  targetFinishDate?: string | null
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
@@ -202,6 +221,9 @@ export async function startReading(
       date_finished: null,
       pages_read_so_far: 0,
       ...(pickedBy ? { picked_by: pickedBy } : {}),
+      ...(targetFinishDate && /^\d{4}-\d{2}-\d{2}$/.test(targetFinishDate)
+        ? { target_finish_date: targetFinishDate }
+        : {}),
     })
     .eq('id', bookId)
 
@@ -209,6 +231,8 @@ export async function startReading(
     await restoreActiveBooks(supabase, previouslyActive)
     return { error: friendlyError(error) }
   }
+
+  await announceBookStarted(supabase, bookId)
 
   revalidateAll()
   redirect('/')
@@ -220,7 +244,7 @@ export async function finishBook(bookId: string): Promise<ActionResult> {
 
   const { data: book } = await supabase
     .from('books')
-    .select('page_count, date_finished')
+    .select('date_finished')
     .eq('id', bookId)
     .single()
 
@@ -229,7 +253,6 @@ export async function finishBook(bookId: string): Promise<ActionResult> {
     .update({
       status: 'finished',
       date_finished: book?.date_finished ?? todayStr(),
-      ...(book?.page_count ? { pages_read_so_far: book.page_count } : {}),
     })
     .eq('id', bookId)
 
@@ -237,21 +260,6 @@ export async function finishBook(bookId: string): Promise<ActionResult> {
 
   revalidateAll()
   redirect(`/books/${bookId}`)
-}
-
-export async function updatePagesRead(bookId: string, pages: number): Promise<ActionResult> {
-  if (!Number.isFinite(pages) || pages < 0) return { error: 'Enter a page number.' }
-
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('books')
-    .update({ pages_read_so_far: Math.round(pages) })
-    .eq('id', bookId)
-
-  if (error) return { error: friendlyError(error) }
-
-  revalidateAll()
-  return undefined
 }
 
 /** Corrects who picked (or suggested) a book. */

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/logout/actions'
 import AvatarUploader from '@/components/AvatarUploader'
-import { DisplayNameForm, PasswordForm } from '@/components/ProfileForms'
+import { DisplayNameForm, EmailToggle, PasswordForm } from '@/components/ProfileForms'
 
 export const metadata: Metadata = { title: 'Your profile' }
 
@@ -16,7 +16,7 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, avatar_url')
+    .select('*')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -33,6 +33,11 @@ export default async function ProfilePage() {
         <AvatarUploader userId={user.id} name={displayName} url={profile?.avatar_url ?? null} />
         <hr className="border-stone-100" />
         <DisplayNameForm displayName={displayName} />
+      </section>
+
+      <section className="card space-y-3 p-5 sm:p-6">
+        <h2 className="section-title">Emails</h2>
+        <EmailToggle enabled={profile?.email_notifications !== false} />
       </section>
 
       <section className="card space-y-3 p-5 sm:p-6">

@@ -153,3 +153,33 @@
     animation: none;
   }
 }
+
+/* Podium: the crown bobs and the sparkles twinkle. */
+@keyframes podium-bob {
+  50% {
+    transform: translateY(-3px) rotate(-4deg);
+  }
+}
+@keyframes podium-twinkle {
+  0%,
+  100% {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.1) rotate(20deg);
+    opacity: 1;
+  }
+}
+.podium-bob {
+  animation: podium-bob 2.4s ease-in-out infinite;
+}
+.podium-twinkle {
+  animation: podium-twinkle 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .podium-bob,
+  .podium-twinkle {
+    animation: none;
+  }
+}

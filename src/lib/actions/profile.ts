@@ -64,3 +64,28 @@ export async function changePassword(
 
   return { saved: true }
 }
+
+export async function setEmailNotifications(enabled: boolean): Promise<ProfileFormState> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ email_notifications: enabled })
+    .eq('id', user.id)
+
+  if (error) {
+    // The column is added by supabase/migrations/add_email_notifications.sql.
+    if (/email_notifications/.test(error.message)) {
+      return { error: 'Email settings aren’t set up yet (a database update is pending).' }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath('/', 'layout')
+  return { saved: true }
+}

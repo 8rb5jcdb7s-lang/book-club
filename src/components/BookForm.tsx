@@ -42,7 +42,6 @@ export default function BookForm({
   const [dateStarted, setDateStarted] = useState(book?.date_started ?? (isEdit ? '' : today))
   const [dateFinished, setDateFinished] = useState(book?.date_finished ?? '')
   const [targetFinishDate, setTargetFinishDate] = useState(book?.target_finish_date ?? '')
-  const [pagesRead, setPagesRead] = useState(book?.pages_read_so_far?.toString() ?? '0')
   const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle'
   )
@@ -270,22 +269,7 @@ export default function BookForm({
                 onChange={(e) => setTargetFinishDate(e.target.value)}
                 className="input"
               />
-              <p className="hint">Used to work out the pages-per-day pace.</p>
-            </div>
-            <div>
-              <label htmlFor="pages_read_so_far" className="label">
-                Pages read so far
-              </label>
-              <input
-                id="pages_read_so_far"
-                name="pages_read_so_far"
-                type="number"
-                inputMode="numeric"
-                min="0"
-                value={pagesRead}
-                onChange={(e) => setPagesRead(e.target.value)}
-                className="input"
-              />
+              <p className="hint">Sets the countdown and the page you should be on each day.</p>
             </div>
           </>
         )}

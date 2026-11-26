@@ -58,6 +58,7 @@ haven't yet:
 - `add_book_synopsis.sql`, `add_book_links.sql` — synopsis and Goodreads/Amazon links
 - `add_did_not_finish.sql` — lets a member mark a book "did not finish" instead of rating it
 - `add_half_point_ratings.sql` — allows ratings in half-point steps (7.5)
+- `add_email_notifications.sql` — email on/off switch per member, and the log that stops repeat emails
 
 ## 8. Keeping Supabase awake
 
@@ -75,3 +76,30 @@ from calling that URL.
 "Today" (for start/finish dates and the pages-per-day pace) is worked out in
 `America/Los_Angeles`. To change it, set `NEXT_PUBLIC_CLUB_TIME_ZONE` (e.g.
 `America/New_York`) in Vercel and `.env.local`.
+
+## 10. Email notifications
+
+The site sends three kinds of email, each at most once per book (and per person):
+a new book was started, someone pressed "I finished it!", and "you're the only one
+who hasn't rated" (sent by the daily cron job, only once everyone else has been done
+for two days, and only for books finished in the last 45 days). Members can switch
+them off on their profile page.
+
+Emails go out through a Gmail account using an **app password** (not the account's
+normal password):
+
+1. Sign in to the Gmail account, turn on 2-Step Verification
+   (https://myaccount.google.com/security), then create an app password at
+   https://myaccount.google.com/apppasswords.
+2. In **Vercel > Project > Settings > Environment Variables**, add:
+   - `GMAIL_USER` — the Gmail address
+   - `GMAIL_APP_PASSWORD` — the 16-character app password
+   - `SUPABASE_SECRET_KEY` — the secret key from **Supabase > Project Settings > API keys**
+     (needed to look up members' email addresses)
+   - `NEXT_PUBLIC_SITE_URL` — the site's address, e.g. `https://book-club-sage.vercel.app`
+3. Run `supabase/migrations/add_email_notifications.sql` in the Supabase SQL editor.
+4. Redeploy so the new variables take effect.
+
+Until all of that is done, no emails are sent and nothing else is affected. When
+running locally without the Gmail variables, emails are printed to the terminal
+instead of being sent.

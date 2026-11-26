@@ -1,15 +1,14 @@
 import Link from 'next/link'
-import { formatDate } from '@/lib/dates'
-import { daysUntilTarget, progressPercent, requiredPace } from '@/lib/pace'
+import { addDays, daysBetween, formatDate, todayStr } from '@/lib/dates'
+import { daysToFinish, readingSchedule } from '@/lib/pace'
 import { finishBook } from '@/lib/actions/books'
-import PagesReadForm from '@/components/PagesReadForm'
 import Avatar from '@/components/Avatar'
 import FinishButton from '@/components/FinishButton'
 import BookCover from '@/components/BookCover'
 import ConfirmActionButton from '@/components/ConfirmActionButton'
-import type { Book } from '@/lib/types'
+import type { Book, Profile } from '@/lib/types'
 
-type Finisher = {
+export type Finisher = {
   user_id: string
   finished_at: string
   profile: { display_name: string; avatar_url: string | null }
@@ -18,42 +17,26 @@ type Finisher = {
 type Props = {
   book: (Book & { picker?: { display_name: string; avatar_url: string | null } | null }) | null
   finishers?: Finisher[]
-  memberCount?: number
+  members?: Profile[]
   currentUserId?: string | null
   hasQueuedBooks?: boolean
 }
 
-function paceMessage(book: Book): { text: string; tone: 'neutral' | 'warn' | 'good' } | null {
-  const daysLeft = daysUntilTarget(book)
-  const pace = requiredPace(book)
-  if (daysLeft === null || pace === null || !book.page_count) return null
+const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']
+const PLACE_STYLES = [
+  'bg-amber-300 text-amber-950',
+  'bg-stone-300 text-stone-800',
+  'bg-orange-300 text-orange-950',
+]
 
-  if (book.pages_read_so_far >= book.page_count) {
-    return { text: 'All pages read — time to talk about it.', tone: 'good' }
-  }
-  const target = formatDate(book.target_finish_date, { withYear: false })
-  if (daysLeft < 0) {
-    const days = Math.abs(daysLeft)
-    return {
-      text: `The ${target} target passed ${days} ${days === 1 ? 'day' : 'days'} ago.`,
-      tone: 'warn',
-    }
-  }
-  if (daysLeft === 0) {
-    return { text: `Target is today — ${Math.ceil(pace)} pages to go.`, tone: 'warn' }
-  }
-  return {
-    text: `About ${Math.ceil(pace)} pages a day to finish by ${target} (${daysLeft} ${
-      daysLeft === 1 ? 'day' : 'days'
-    } left).`,
-    tone: 'neutral',
-  }
+function days(n: number): string {
+  return `${n} ${n === 1 ? 'day' : 'days'}`
 }
 
 export default function NowReadingCard({
   book,
   finishers = [],
-  memberCount = 0,
+  members = [],
   currentUserId = null,
   hasQueuedBooks = false,
 }: Props) {
@@ -63,7 +46,7 @@ export default function NowReadingCard({
         <p className="eyebrow">Now reading</p>
         <h2 className="mt-2 text-2xl font-semibold text-stone-900">Nothing on the nightstand</h2>
         <p className="mt-1 max-w-sm text-sm text-stone-500">
-          Pick the club&apos;s next book to start tracking progress, ratings and quotes.
+          Pick the club&apos;s next book to start the countdown, ratings and quotes.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Link href="/books/new" className="btn btn-primary">
@@ -79,9 +62,54 @@ export default function NowReadingCard({
     )
   }
 
-  const percent = progressPercent(book)
-  const pace = paceMessage(book)
-  const iFinished = finishers.some((f) => f.user_id === currentUserId)
+  const schedule = readingSchedule(book)
+  const finished = [...finishers].sort((a, b) => a.finished_at.localeCompare(b.finished_at))
+  const finishedIds = new Set(finished.map((f) => f.user_id))
+  const stillReading = members.filter((m) => !finishedIds.has(m.id))
+  const iFinished = currentUserId !== null && finishedIds.has(currentUserId)
+  const everyoneDone = members.length > 0 && stillReading.length === 0
+
+  // Flags on the timeline: where in the reading window each person finished.
+  const flags =
+    book.date_started && schedule.totalDays
+      ? finished.map((f, i) => {
+          const finishDate = todayStr(new Date(f.finished_at))
+          const elapsed = Math.max(0, daysBetween(book.date_started!, finishDate))
+          const percent = Math.min(100, (elapsed / schedule.totalDays!) * 100)
+          return {
+            finisher: f,
+            place: i,
+            percent,
+            label: `${f.profile.display_name} finished ${formatDate(finishDate, {
+              withYear: false,
+            })}`,
+          }
+        })
+      : []
+
+  // Evenly spaced calendar dates along the bar, from the start to the target.
+  const ticks: { percent: number; date: string }[] = []
+  if (book.date_started && schedule.totalDays) {
+    const steps = Math.min(4, schedule.totalDays)
+    for (let i = 0; i <= steps; i++) {
+      const offset = Math.round((i / steps) * schedule.totalDays)
+      ticks.push({
+        percent: (offset / schedule.totalDays) * 100,
+        date: addDays(book.date_started, offset),
+      })
+    }
+  }
+  const today = todayStr()
+
+  const overdue = schedule.daysLeft !== null && schedule.daysLeft < 0
+  const countdown =
+    schedule.daysLeft === null
+      ? null
+      : overdue
+        ? `${days(Math.abs(schedule.daysLeft))} over`
+        : schedule.daysLeft === 0
+          ? 'Due today'
+          : `${days(schedule.daysLeft)} left`
 
   return (
     <div className="card flex flex-col gap-6 p-5 sm:flex-row sm:p-6">
@@ -90,10 +118,10 @@ export default function NowReadingCard({
         title={book.title}
         author={book.author}
         synopsis={book.synopsis}
-        className="mx-auto aspect-[2/3] w-36 shrink-0 sm:mx-0 sm:w-40"
+        className="mx-auto aspect-[2/3] w-36 shrink-0 self-start sm:mx-0 sm:w-40"
       />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-5">
         <div>
           <div className="flex items-center justify-between gap-2">
             <p className="eyebrow text-accent">Now reading</p>
@@ -114,77 +142,185 @@ export default function NowReadingCard({
           </p>
         </div>
 
-        <div className="space-y-2">
-          {percent !== null && (
-            <div>
-              <div className="mb-1 flex justify-between text-xs font-medium text-stone-500">
-                <span>
-                  {Math.max(0, (book.page_count ?? 0) - book.pages_read_so_far)} pages to go
-                </span>
-                <span className="tabular-nums">{percent}%</span>
-              </div>
-              <div
-                className="h-2.5 overflow-hidden rounded-full bg-stone-200"
-                role="progressbar"
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Reading progress"
+        {/* The countdown: worked out from the dates, nothing to log. */}
+        {schedule.fraction !== null && schedule.totalDays !== null ? (
+          <div>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="font-serif text-xl font-semibold text-stone-900">
+                {everyoneDone
+                  ? 'Everyone’s finished'
+                  : `Finish by ${formatDate(book.target_finish_date, { withYear: false })}`}
+              </p>
+              <p
+                className={`text-sm font-semibold tabular-nums ${
+                  overdue && !everyoneDone ? 'text-rose-700' : 'text-stone-500'
+                }`}
               >
-                <div
-                  className="h-full rounded-full bg-amber-500 transition-[width] duration-500"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
+                {countdown}
+              </p>
             </div>
-          )}
-          <PagesReadForm
-            key={book.pages_read_so_far}
-            bookId={book.id}
-            pagesReadSoFar={book.pages_read_so_far}
-            pageCount={book.page_count}
-          />
-          {pace && (
-            <p
-              className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                pace.tone === 'warn'
-                  ? 'bg-amber-50 text-amber-900'
-                  : pace.tone === 'good'
-                    ? 'bg-emerald-50 text-emerald-900'
-                    : 'bg-stone-100 text-stone-800'
-              }`}
+            {flags.length > 0 && (
+              // Padded so a flag at either end of the bar isn't cut off.
+              <div className="relative mx-3 mt-3 h-9" aria-label="When each person finished">
+                {flags.map((flag) => {
+                  // People who finished on the same day fan out instead of stacking.
+                  const sameSpot = flags.filter(
+                    (other) => other.place < flag.place && Math.abs(other.percent - flag.percent) < 4
+                  ).length
+                  return (
+                    <span
+                      key={flag.finisher.user_id}
+                      className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center"
+                      style={{ left: `${flag.percent}%`, marginLeft: sameSpot * 16, zIndex: 10 - flag.place }}
+                    >
+                      <Avatar
+                        name={flag.finisher.profile.display_name}
+                        url={flag.finisher.profile.avatar_url}
+                        size={6}
+                        tooltip={flag.label}
+                      />
+                      <span className="h-2.5 w-0.5 bg-stone-400" />
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+            <div
+              className={`${flags.length > 0 ? '' : 'mt-2 '}h-2.5 overflow-hidden rounded-full bg-stone-200`}
+              role="progressbar"
+              aria-valuenow={Math.round(schedule.fraction * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Time used up before the target date"
             >
-              {pace.text}
+              <div
+                className={`grow-x h-full rounded-full ${
+                  overdue && !everyoneDone ? 'bg-rose-500' : 'bg-amber-500'
+                }`}
+                style={{ width: `${Math.max(2, schedule.fraction * 100)}%` }}
+              />
+            </div>
+            {/* Calendar dates under the bar */}
+            <div className="relative mx-3 mt-1 h-7" aria-hidden="true">
+              {ticks.map((tick, i) => (
+                <span
+                  key={tick.date}
+                  className={`absolute top-0 flex flex-col ${
+                    i === 0
+                      ? '-ml-3 items-start'
+                      : i === ticks.length - 1
+                        ? '-mr-3 -translate-x-full items-end'
+                        : '-translate-x-1/2 items-center'
+                  }`}
+                  style={{ left: `${tick.percent}%` }}
+                >
+                  <span className="h-1.5 w-px bg-stone-300" />
+                  <span className="mt-0.5 text-[11px] whitespace-nowrap text-stone-400 tabular-nums">
+                    {formatDate(tick.date, { withYear: false })}
+                  </span>
+                </span>
+              ))}
+            </div>
+            {!everyoneDone && schedule.onPacePage !== null && book.page_count && (
+              <p className="mt-3 rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700">
+                {overdue ? (
+                  <>The plan was to be done by now — all {book.page_count} pages.</>
+                ) : (
+                  <>
+                    To be on pace today ({formatDate(today, { withYear: false })}) you&apos;d be
+                    around{' '}
+                    <span className="font-semibold text-stone-900">
+                      page {Math.max(1, schedule.onPacePage)}
+                    </span>{' '}
+                    of {book.page_count}
+                    {schedule.pagesPerDay !== null && (
+                      <span className="text-stone-500">
+                        {' '}
+                        (about {Math.ceil(schedule.pagesPerDay)} pages a day)
+                      </span>
+                    )}
+                    .
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700">
+            {book.date_started
+              ? `Started ${formatDate(book.date_started, { withYear: false })}. `
+              : ''}
+            <Link href={`/books/${book.id}/edit`} className="font-semibold text-accent hover:underline">
+              Set a target date
+            </Link>{' '}
+            to get a countdown and a page to aim for each day.
+          </p>
+        )}
+
+        {/* The finish line: who's done, in order, and who everyone is waiting on. */}
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="eyebrow">The finish line</p>
+            {members.length > 0 && (
+              <p className="text-xs text-stone-500">
+                {finished.length} of {members.length} finished
+              </p>
+            )}
+          </div>
+          {finished.length > 0 ? (
+            <ol className="mt-2 space-y-1.5">
+              {finished.map((f, i) => {
+                const took = daysToFinish(book.date_started, f.finished_at)
+                return (
+                  <li key={f.user_id} className="flex items-center gap-2.5 text-sm">
+                    <span
+                      className={`inline-flex h-6 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        PLACE_STYLES[i] ?? 'bg-stone-100 text-stone-600'
+                      }`}
+                    >
+                      {ORDINALS[i] ?? `${i + 1}th`}
+                    </span>
+                    <Avatar
+                      name={f.profile.display_name}
+                      url={f.profile.avatar_url}
+                      size={6}
+                      showTooltip={false}
+                    />
+                    <span className="min-w-0 truncate font-medium text-stone-900">
+                      {f.profile.display_name}
+                    </span>
+                    <span className="ml-auto shrink-0 text-xs whitespace-nowrap text-stone-500">
+                      {formatDate(todayStr(new Date(f.finished_at)), { withYear: false })}
+                      {took !== null ? ` · ${days(took)}` : ''}
+                    </span>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <p className="mt-2 text-sm text-stone-500">
+              Nobody has finished yet. First place is up for grabs.
+            </p>
+          )}
+          {stillReading.length > 0 && finished.length > 0 && (
+            <p className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-stone-500">
+              <span className="flex -space-x-1.5">
+                {stillReading.map((m) => (
+                  <Avatar key={m.id} name={m.display_name} url={m.avatar_url} size={6} />
+                ))}
+              </span>
+              {stillReading.length === 1
+                ? `Everyone’s waiting on ${stillReading[0].display_name}.`
+                : `Still reading: ${stillReading.map((m) => m.display_name).join(', ')}.`}
             </p>
           )}
         </div>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-stone-100 pt-4">
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-100 pt-4">
           {currentUserId && <FinishButton bookId={book.id} isFinished={iFinished} />}
-          <div className="flex items-center gap-2">
-            {finishers.length > 0 && (
-              <div className="flex -space-x-1.5">
-                {finishers.map((f) => (
-                  <Avatar
-                    key={f.user_id}
-                    name={f.profile.display_name}
-                    url={f.profile.avatar_url}
-                    size={7}
-                    tooltip={`${f.profile.display_name} · finished ${new Date(
-                      f.finished_at
-                    ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                  />
-                ))}
-              </div>
-            )}
-            <span className="text-xs text-stone-500">
-              {finishers.length === 0
-                ? 'Nobody has finished yet'
-                : memberCount > 0
-                  ? `${finishers.length} of ${memberCount} ready to discuss`
-                  : `${finishers.length} ready to discuss`}
-            </span>
-          </div>
+          {!iFinished && currentUserId && (
+            <span className="text-xs text-stone-500">Emails everyone that you&apos;re done.</span>
+          )}
           <div className="flex items-center gap-2 sm:ml-auto">
             <ConfirmActionButton
               action={finishBook.bind(null, book.id)}

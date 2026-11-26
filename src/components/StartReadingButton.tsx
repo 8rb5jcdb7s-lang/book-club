@@ -22,6 +22,7 @@ export default function StartReadingButton({
 }) {
   const [open, setOpen] = useState(false)
   const [pickerId, setPickerId] = useState(suggestedPickerId ?? '')
+  const [targetDate, setTargetDate] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -52,14 +53,26 @@ export default function StartReadingButton({
           ))}
         </select>
       </label>
-      <p className="text-xs text-stone-500">The current book, if any, moves to History.</p>
+      <label className="block text-xs font-medium text-stone-600">
+        Finish by (optional)
+        <input
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          disabled={isPending}
+          className="input mt-1 py-1.5"
+        />
+      </label>
+      <p className="text-xs text-stone-500">
+        The current book, if any, moves to History, and everyone gets an email.
+      </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              const result = await startReading(bookId, pickerId || null)
+              const result = await startReading(bookId, pickerId || null, targetDate || null)
               setError(result?.error ?? null)
             })
           }

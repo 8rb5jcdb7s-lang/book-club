@@ -47,3 +47,8 @@ export function formatDate(
 export function yearOf(dateStr: string): number {
   return Number(dateStr.slice(0, 4))
 }
+
+/** The date `days` after a 'YYYY-MM-DD' date, as 'YYYY-MM-DD'. */
+export function addDays(dateStr: string, days: number): string {
+  return new Date(toUtcMs(dateStr) + days * MS_PER_DAY).toISOString().slice(0, 10)
+}

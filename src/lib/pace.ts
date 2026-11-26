@@ -14,24 +14,52 @@ export function historicalPace(book: Book): number | null {
   return book.page_count / days
 }
 
-/** Days until the target finish date (0 = due today, negative = overdue). */
-export function daysUntilTarget(book: Book, today: string = todayStr()): number | null {
-  if (!book.target_finish_date) return null
-  return daysBetween(today, book.target_finish_date)
+export type ReadingSchedule = {
+  /** 1 on the day the book was started. Null without a start date. */
+  dayNumber: number | null
+  /** Length of the reading window in days. Null without a target date. */
+  totalDays: number | null
+  /** Days until the target (0 = today, negative = overdue). */
+  daysLeft: number | null
+  /** 0–1 share of the reading window that has passed. */
+  fraction: number | null
+  /** Pages a day needed to cover the whole book in the window. */
+  pagesPerDay: number | null
+  /** The page someone reading at an even pace would be on today. */
+  onPacePage: number | null
 }
 
-/** Pages/day required to finish the currently-reading book by its target date. */
-export function requiredPace(book: Book, today: string = todayStr()): number | null {
-  if (!book.page_count || !book.target_finish_date) return null
+/**
+ * Where the club "should" be in the current book, worked out purely from the
+ * start date, target date and page count — nobody has to log anything.
+ */
+export function readingSchedule(
+  book: Pick<Book, 'date_started' | 'target_finish_date' | 'page_count'>,
+  today: string = todayStr()
+): ReadingSchedule {
+  const elapsed = book.date_started ? Math.max(0, daysBetween(book.date_started, today)) : null
+  const dayNumber = elapsed === null ? null : elapsed + 1
+  const daysLeft = book.target_finish_date ? daysBetween(today, book.target_finish_date) : null
 
-  const pagesRemaining = Math.max(0, book.page_count - book.pages_read_so_far)
-  const daysRemaining = Math.max(1, daysBetween(today, book.target_finish_date))
+  if (!book.date_started || !book.target_finish_date || elapsed === null) {
+    return { dayNumber, totalDays: null, daysLeft, fraction: null, pagesPerDay: null, onPacePage: null }
+  }
 
-  return pagesRemaining / daysRemaining
+  const totalDays = Math.max(1, daysBetween(book.date_started, book.target_finish_date))
+  const fraction = Math.min(1, elapsed / totalDays)
+
+  return {
+    dayNumber,
+    totalDays,
+    daysLeft,
+    fraction,
+    pagesPerDay: book.page_count ? book.page_count / totalDays : null,
+    onPacePage: book.page_count ? Math.round(book.page_count * fraction) : null,
+  }
 }
 
-/** 0–100 progress through the current book, or null without a page count. */
-export function progressPercent(book: Book): number | null {
-  if (!book.page_count) return null
-  return Math.min(100, Math.max(0, Math.round((book.pages_read_so_far / book.page_count) * 100)))
+/** Calendar days from a book's start to a finish timestamp (at least 1). */
+export function daysToFinish(dateStarted: string | null, finishedAt: string): number | null {
+  if (!dateStarted) return null
+  return Math.max(1, daysBetween(dateStarted, todayStr(new Date(finishedAt))))
 }

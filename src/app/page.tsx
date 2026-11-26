@@ -1,16 +1,11 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { pickQueue, recentPicks } from '@/lib/picks'
+import { topRated } from '@/lib/stats'
 import BookCover from '@/components/BookCover'
-import NowReadingCard from '@/components/NowReadingCard'
+import NowReadingCard, { type Finisher } from '@/components/NowReadingCard'
 import PickTrackerCard from '@/components/PickTrackerCard'
-import QuoteOfTheDayCard from '@/components/QuoteOfTheDayCard'
-
-type Finisher = {
-  user_id: string
-  finished_at: string
-  profile: { display_name: string; avatar_url: string | null }
-}
+import PodiumCard from '@/components/PodiumCard'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -20,6 +15,7 @@ export default async function DashboardPage() {
     { data: pickedBooks },
     { data: profiles },
     { data: queued },
+    { data: allRatings },
     {
       data: { user },
     },
@@ -31,7 +27,7 @@ export default async function DashboardPage() {
       .maybeSingle(),
     supabase
       .from('books')
-      .select('id, title, status, picked_by, date_started, date_finished, created_at')
+      .select('id, title, author, cover_url, status, picked_by, date_started, date_finished, created_at')
       .in('status', ['reading', 'finished']),
     supabase.from('profiles').select('*').order('display_name'),
     supabase
@@ -39,6 +35,7 @@ export default async function DashboardPage() {
       .select('id, title, author, cover_url')
       .eq('status', 'queued')
       .order('created_at', { ascending: false }),
+    supabase.from('ratings_notes').select('book_id, rating'),
     supabase.auth.getUser(),
   ])
 
@@ -52,6 +49,7 @@ export default async function DashboardPage() {
   }
 
   const queuedBooks = queued ?? []
+  const podium = topRated(pickedBooks ?? [], allRatings ?? [])
 
   // Nudge: has this member rated the book the club finished most recently?
   let unratedBook: { id: string; title: string } | null = null
@@ -93,7 +91,7 @@ export default async function DashboardPage() {
         <NowReadingCard
           book={book}
           finishers={finishers}
-          memberCount={profiles?.length ?? 0}
+          members={profiles ?? []}
           currentUserId={user?.id ?? null}
           hasQueuedBooks={queuedBooks.length > 0}
         />
@@ -104,12 +102,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="min-w-0 space-y-6">
-        <QuoteOfTheDayCard
-          members={(profiles ?? []).map((profile) => ({
-            display_name: profile.display_name,
-            avatar_url: profile.avatar_url,
-          }))}
-        />
+<PodiumCard entries={podium} />
 
         <div className="card p-5 sm:p-6">
           <div className="flex items-center justify-between">

@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState, useTransition } from 'react'
 import {
   changePassword,
+  setEmailNotifications,
   updateDisplayName,
   type ProfileFormState,
 } from '@/lib/actions/profile'
@@ -91,5 +92,41 @@ export function PasswordForm() {
         <Status state={state} savedText="Password updated ✓" />
       </div>
     </form>
+  )
+}
+
+export function EmailToggle({ enabled }: { enabled: boolean }) {
+  const [on, setOn] = useState(enabled)
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  return (
+    <div>
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={on}
+          disabled={isPending}
+          onChange={(e) => {
+            const next = e.target.checked
+            setOn(next)
+            startTransition(async () => {
+              const result = await setEmailNotifications(next)
+              setError(result?.error ?? null)
+              if (result?.error) setOn(!next)
+            })
+          }}
+          className="mt-1 h-4 w-4 accent-stone-900"
+        />
+        <span>
+          <span className="block text-sm font-medium text-stone-900">Email me club updates</span>
+          <span className="block text-sm text-stone-500">
+            Only three things: a new book starts, someone finishes the current book, or
+            you&apos;re the last one who hasn&apos;t rated.
+          </span>
+        </span>
+      </label>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    </div>
   )
 }

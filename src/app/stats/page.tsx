@@ -17,6 +17,7 @@ import {
   distinctAuthors,
   fastestSlowestReads,
   finishedInOrder,
+  finishSummaries,
   genreBreakdown,
   longestGapDays,
   longestShortestBooks,
@@ -159,12 +160,18 @@ export default async function StatsPage({
   const { year: yearParam } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: books }, { data: ratingsNotes }, { data: profiles }, { data: quotes }] =
-    await Promise.all([
+  const [
+    { data: books },
+    { data: ratingsNotes },
+    { data: profiles },
+    { data: quotes },
+    { data: finishes },
+  ] = await Promise.all([
       supabase.from('books').select('*'),
       supabase.from('ratings_notes').select('*'),
       supabase.from('profiles').select('*'),
       supabase.from('quotes').select('*'),
+      supabase.from('book_finishes').select('*'),
     ])
 
   const allBooks = books ?? []
@@ -205,6 +212,10 @@ export default async function StatsPage({
   const { best, worst } = bestWorstRated(b, rn)
   const disagreements = biggestDisagreement(b, rn)
   const abandoned = mostAbandoned(b, rn)
+  const racers = finishSummaries(b, finishes ?? [], p)
+  const quickest = racers
+    .filter((r) => r.fastest)
+    .sort((x, y) => x.fastest!.days - y.fastest!.days)[0]
   const distribution = ratingDistribution(rn)
   const maxDistribution = Math.max(1, ...distribution)
   const totalRatings = distribution.reduce((sum, n) => sum + n, 0)
@@ -444,6 +455,17 @@ export default async function StatsPage({
                 detail={fastest ? `${fastest.pace.toFixed(1)} pages a day` : undefined}
               />
               <Award
+                label="Fastest to the finish"
+                book={quickest?.fastest?.book}
+                detail={
+                  quickest?.fastest
+                    ? `${quickest.profile.display_name}, in ${quickest.fastest.days} ${
+                        quickest.fastest.days === 1 ? 'day' : 'days'
+                      }`
+                    : undefined
+                }
+              />
+              <Award
                 label="The slow burn"
                 book={slowest && slowest.book.id !== fastest?.book.id ? slowest.book : null}
                 detail={slowest ? `${slowest.pace.toFixed(1)} pages a day` : undefined}
@@ -572,6 +594,71 @@ export default async function StatsPage({
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {/* Race to the finish */}
+          {racers.length > 0 && (
+            <section className="card p-5 sm:p-6">
+              <h2 className="section-title">Race to the finish</h2>
+              <p className="text-sm text-stone-500">
+                From the “I finished it!” button: who crosses the line first, and who keeps
+                everyone waiting.
+              </p>
+              <div className="no-scrollbar mt-4 overflow-x-auto">
+                <table className="w-full min-w-[26rem] text-sm">
+                  <thead className="text-left text-xs font-semibold tracking-wider text-stone-500 uppercase">
+                    <tr>
+                      <th className="pb-2 font-semibold">Reader</th>
+                      <th className="pb-2 text-center font-semibold">Finished 1st</th>
+                      <th className="pb-2 text-center font-semibold">Finished last</th>
+                      <th className="pb-2 text-right font-semibold">Avg. days</th>
+                      <th className="pb-2 text-right font-semibold">Books logged</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {racers.map((r) => (
+                      <tr key={r.profile.id}>
+                        <td className="py-2.5">
+                          <span className="flex items-center gap-2 font-medium text-stone-900">
+                            <Avatar
+                              name={r.profile.display_name}
+                              url={r.profile.avatar_url}
+                              size={7}
+                              showTooltip={false}
+                            />
+                            {r.profile.display_name}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-center">
+                          <span
+                            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-bold tabular-nums ${
+                              r.firsts > 0 ? 'bg-amber-300 text-amber-950' : 'text-stone-300'
+                            }`}
+                          >
+                            {r.firsts}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-center">
+                          <span
+                            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-bold tabular-nums ${
+                              r.lasts > 0 ? 'bg-rose-100 text-rose-800' : 'text-stone-300'
+                            }`}
+                          >
+                            {r.lasts}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-right text-stone-700 tabular-nums">
+                          {r.averageDays !== null ? r.averageDays.toFixed(0) : '—'}
+                        </td>
+                        <td className="py-2.5 text-right text-stone-500 tabular-nums">
+                          {r.finishCount}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           )}
 
