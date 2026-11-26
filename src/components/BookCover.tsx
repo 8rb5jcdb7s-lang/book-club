@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { sharperCoverUrl } from '@/lib/covers'
 
 function searchLinks(title: string, author: string | null) {
   const query = encodeURIComponent(`${title} ${author ?? ''}`.trim())
@@ -8,6 +9,54 @@ function searchLinks(title: string, author: string | null) {
     goodreads: `https://www.goodreads.com/search?q=${query}`,
     amazon: `https://www.amazon.com/s?k=${query}&i=stripbooks`,
   }
+}
+
+// Every cover is shown in the same 2:3 frame. Images close to that shape fill
+// it; anything squarer or taller is shown whole over a blurred copy of itself,
+// so nothing gets cropped and the shelf still looks even.
+const FRAME_RATIO = 2 / 3
+const RATIO_TOLERANCE = 0.09
+
+// Cloth-bound colours for books with no cover image, chosen by title so a
+// book always gets the same one.
+const CLOTH = [
+  { background: '#7c2d12', ink: '#fde68a' },
+  { background: '#14532d', ink: '#fef3c7' },
+  { background: '#1e3a8a', ink: '#fde68a' },
+  { background: '#581c87', ink: '#fbcfe8' },
+  { background: '#0f766e', ink: '#fef9c3' },
+  { background: '#44403c', ink: '#fcd34d' },
+  { background: '#9f1239', ink: '#ffe4e6' },
+]
+
+function clothFor(title: string) {
+  let hash = 0
+  for (const ch of title) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+  return CLOTH[hash % CLOTH.length]
+}
+
+function GeneratedCover({ title, author }: { title: string; author: string | null }) {
+  const cloth = clothFor(title)
+  return (
+    <span
+      className="flex h-full w-full p-[6%] [container-type:inline-size]"
+      style={{ backgroundColor: cloth.background, color: cloth.ink }}
+    >
+      <span
+        className="flex h-full w-full flex-col items-center justify-center gap-[6cqw] rounded-[2px] border px-[7cqw] text-center"
+        style={{ borderColor: `${cloth.ink}66` }}
+      >
+        <span className="line-clamp-5 font-serif text-[13cqw] leading-[1.15] font-semibold [overflow-wrap:anywhere]">
+          {title}
+        </span>
+        {author && (
+          <span className="line-clamp-2 text-[8cqw] leading-tight tracking-wide uppercase opacity-80">
+            {author}
+          </span>
+        )}
+      </span>
+    </span>
+  )
 }
 
 /**
@@ -28,31 +77,47 @@ export default function BookCover({
   className?: string
 }) {
   const [flipped, setFlipped] = useState(false)
-  const [broken, setBroken] = useState(false)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  const [oddShape, setOddShape] = useState(false)
+
+  const src = coverUrl ? sharperCoverUrl(coverUrl) : null
+  const broken = src !== null && failedUrl === src
 
   const face =
-    'absolute inset-0 overflow-hidden rounded-md bg-stone-100 shadow-md ring-1 ring-stone-900/10'
+    'absolute inset-0 overflow-hidden rounded-md bg-stone-200 shadow-md ring-1 ring-stone-900/10'
 
   const front =
-    coverUrl && !broken ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={coverUrl}
-        alt={`Cover of ${title}`}
-        onError={() => setBroken(true)}
-        // Open Library answers with a 1x1 blank image when it has no cover.
-        onLoad={(e) => {
-          if (e.currentTarget.naturalWidth <= 1) setBroken(true)
-        }}
-        className="h-full w-full object-cover"
-      />
+    src && !broken ? (
+      <>
+        {oddShape && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full scale-125 object-cover opacity-80 blur-md"
+          />
+        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={src}
+          src={src}
+          alt={`Cover of ${title}`}
+          onError={() => setFailedUrl(src)}
+          onLoad={(e) => {
+            const { naturalWidth, naturalHeight } = e.currentTarget
+            // Open Library answers with a 1×1 blank image when it has no cover.
+            if (naturalWidth <= 1) {
+              setFailedUrl(src)
+              return
+            }
+            setOddShape(Math.abs(naturalWidth / naturalHeight - FRAME_RATIO) > RATIO_TOLERANCE)
+          }}
+          className={`relative h-full w-full ${oddShape ? 'object-contain' : 'object-cover'}`}
+        />
+      </>
     ) : (
-      <span className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-stone-200 to-stone-300 p-2 text-center">
-        <span className="line-clamp-4 font-serif text-xs leading-tight font-semibold text-stone-700">
-          {title}
-        </span>
-        {author && <span className="line-clamp-1 text-[10px] text-stone-500">{author}</span>}
-      </span>
+      <GeneratedCover title={title} author={author} />
     )
 
   if (!synopsis) {

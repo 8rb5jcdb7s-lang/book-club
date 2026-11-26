@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createBook, updateBook, type BookFormState } from '@/lib/actions/books'
 import { lookupBook } from '@/lib/bookApi'
 import BookCover from '@/components/BookCover'
+import CoverPicker from '@/components/CoverPicker'
 import type { Book, BookStatus, Profile } from '@/lib/types'
 
 /** Create form when `book` is omitted, edit form when it's provided. */
@@ -177,6 +178,21 @@ export default function BookForm({
           author={author || null}
           className="hidden aspect-[2/3] w-28 shrink-0 self-start sm:block"
         />
+      </div>
+
+      <div>
+        <p className="label">Cover</p>
+        <div className="flex gap-4">
+          <BookCover
+            coverUrl={coverUrl || null}
+            title={title || 'Cover'}
+            author={author || null}
+            className="aspect-[2/3] w-16 shrink-0 self-start sm:hidden"
+          />
+          <div className="min-w-0 flex-1">
+            <CoverPicker title={title} author={author} value={coverUrl} onChange={setCoverUrl} />
+          </div>
+        </div>
       </div>
 
       <fieldset>

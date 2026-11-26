@@ -1,3 +1,5 @@
+import { bestCover } from './covers'
+
 export type BookLookupResult = {
   title: string | null
   author: string | null
@@ -191,14 +193,21 @@ export async function lookupBook(query: string): Promise<BookLookupResult | null
   const synopsis = doc.key ? await getSynopsis(doc.key) : null
   const { goodreadsId, amazonAsin } = getEditionLinks(editions)
 
+  const title = englishTitle ?? doc.title ?? null
+  const author = doc.author_name?.[0] ?? null
+
+  // Prefer a sharp, current-edition cover from Apple Books; fall back to the
+  // large Open Library image.
+  const appleCover = title ? await bestCover(title, author) : null
+
   return {
-    title: englishTitle ?? doc.title ?? null,
-    author: doc.author_name?.[0] ?? null,
+    title,
+    author,
     pageCount: doc.number_of_pages_median ?? null,
     genre: deriveGenre(doc.subject),
-    coverUrl: doc.cover_i
-      ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
-      : null,
+    coverUrl:
+      appleCover ??
+      (doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null),
     openLibraryId: doc.key ?? null,
     synopsis,
     goodreadsId,
