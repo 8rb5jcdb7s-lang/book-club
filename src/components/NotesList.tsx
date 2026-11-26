@@ -21,7 +21,7 @@ export default function NotesList({ ratingsNotes }: { ratingsNotes: Row[] }) {
               <Avatar name={name} url={rn.profile?.avatar_url} size={8} showTooltip={false} />
               <span className="flex-1 font-medium text-stone-900">{name}</span>
               {rn.did_not_finish ? (
-                <span className="rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-600">
+                <span className="chip bg-stone-200">
                   Did not finish
                 </span>
               ) : (

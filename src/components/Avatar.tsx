@@ -41,7 +41,7 @@ export default function Avatar({
     <span className="group/avatar relative inline-flex shrink-0 hover:z-10">
       {url ? (
         <span
-          className="inline-flex overflow-hidden rounded-full bg-stone-100 ring-2 ring-white"
+          className="inline-flex overflow-hidden rounded-full bg-stone-100 ring-2 ring-ink"
           style={style}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -56,7 +56,7 @@ export default function Avatar({
         </span>
       ) : (
         <span
-          className={`inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-white ${colorFor(name)}`}
+          className={`inline-flex items-center justify-center rounded-full font-semibold ring-2 ring-ink ${colorFor(name)}`}
           style={style}
           aria-label={name}
         >

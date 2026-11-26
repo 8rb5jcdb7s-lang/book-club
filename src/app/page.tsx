@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         {unratedBook && (
           <Link
             href={`/books/${unratedBook.id}`}
-            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-2xl border border-amber-200 bg-accent-soft px-5 py-3 text-sm transition-colors hover:border-amber-300"
+            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-2xl border-2 border-ink bg-amber-100 px-5 py-3 text-sm shadow-[0_3px_0_0_var(--color-ink)] transition-colors hover:bg-amber-200"
           >
             <span className="text-amber-950">
               You haven&apos;t rated <span className="font-semibold">{unratedBook.title}</span> yet.

@@ -104,9 +104,9 @@ function Leaderboard({
                   </span>
                   <span className="text-xs whitespace-nowrap text-stone-400">{row.detail}</span>
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                <div className="bar mt-1 h-3">
                   <div
-                    className="grow-x h-full rounded-full bg-amber-500"
+                    className="grow-x bar-fill"
                     style={{ width: `${row.averageRating * 10}%`, animationDelay: `${i * 80}ms` }}
                   />
                 </div>
@@ -122,7 +122,7 @@ function Leaderboard({
 
 function TasteRow({ label, pair, tone }: { label: string; pair: TastePair; tone: string }) {
   return (
-    <div className={`rounded-xl p-4 ${tone}`}>
+    <div className={`rounded-2xl border-2 border-ink p-4 ${tone}`}>
       <p className="eyebrow">{label}</p>
       <div className="mt-2 flex items-center gap-3">
         <div className="flex -space-x-2">
@@ -242,7 +242,7 @@ export default async function StatsPage({
         {years.length > 0 && (
           <nav
             aria-label="Time range"
-            className="no-scrollbar -mx-1 flex max-w-full gap-1 overflow-x-auto rounded-full bg-stone-200/60 p-1"
+            className="no-scrollbar -mx-1 flex max-w-full gap-1 overflow-x-auto rounded-full bg-stone-200/70 p-1"
           >
             {[null, ...years].map((y) => {
               const active = y === year
@@ -252,8 +252,8 @@ export default async function StatsPage({
                   href={y ? `/stats?year=${y}` : '/stats'}
                   scroll={false}
                   aria-current={active ? 'page' : undefined}
-                  className={`rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors ${
-                    active ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'
+                  className={`rounded-full border-2 px-3 py-0.5 text-sm font-extrabold whitespace-nowrap transition-colors ${
+                    active ? 'border-ink bg-sun text-ink' : 'border-transparent text-stone-600 hover:text-ink'
                   }`}
                 >
                   {y ?? 'All time'}
@@ -272,7 +272,7 @@ export default async function StatsPage({
       ) : (
         <>
           {/* Hero */}
-          <section className="overflow-hidden rounded-3xl bg-stone-900 text-stone-100 shadow-lg">
+          <section className="overflow-hidden rounded-3xl border-2 border-ink bg-ink text-stone-100 shadow-[0_5px_0_0_#a8a29e]">
             <div className="px-5 pt-6 sm:px-8 sm:pt-8">
               <p className="text-xs font-semibold tracking-wider text-amber-400 uppercase">
                 {year ? `${year} in review` : 'The story so far'}
@@ -389,8 +389,10 @@ export default async function StatsPage({
                         </>
                       )}
                       <span
-                        className={`grow-y block rounded-t-md ${
-                          month.pages > 0 ? 'bg-amber-500 group-hover/month:bg-amber-600' : 'bg-stone-200'
+                        className={`grow-y block rounded-t-xl ${
+                          month.pages > 0
+                            ? 'border-2 border-b-0 border-ink bg-amber-400 group-hover/month:bg-amber-500'
+                            : 'bg-stone-200'
                         }`}
                         style={{
                           height: month.pages > 0 ? `${Math.max(6, (month.pages / maxMonthPages) * 78)}%` : '3px',
@@ -491,11 +493,11 @@ export default async function StatsPage({
                         </span>
                       )}
                       <span
-                        className="grow-y block rounded-t-md"
+                        className={`grow-y block rounded-t-xl ${n > 0 ? "border-2 border-b-0 border-ink" : ""}`}
                         style={{
                           height: n > 0 ? `${Math.max(6, (n / maxDistribution) * 80)}%` : '3px',
                           backgroundColor:
-                            n > 0 ? `hsl(${(i / 9) * 120}, 65%, 62%)` : 'var(--color-stone-200)',
+                            n > 0 ? `hsl(${(i / 9) * 120}, 75%, 72%)` : 'var(--color-stone-200)',
                           animationDelay: `${i * 50}ms`,
                         }}
                       />
@@ -514,9 +516,9 @@ export default async function StatsPage({
                 </p>
                 {closest ? (
                   <div className="mt-4 grid flex-1 content-start gap-3">
-                    <TasteRow label="Most in sync" pair={closest} tone="bg-emerald-50" />
+                    <TasteRow label="Most in sync" pair={closest} tone="bg-emerald-100" />
                     {furthest && furthest.averageGap > closest.averageGap && (
-                      <TasteRow label="Agree to disagree" pair={furthest} tone="bg-rose-50" />
+                      <TasteRow label="Agree to disagree" pair={furthest} tone="bg-rose-100" />
                     )}
                   </div>
                 ) : (
@@ -554,13 +556,13 @@ export default async function StatsPage({
                       </div>
                     </div>
                     <dl className="mt-4 grid grid-cols-2 gap-2 text-center">
-                      <div className="rounded-lg bg-stone-50 px-2 py-2">
+                      <div className="rounded-2xl bg-stone-100 px-2 py-2">
                         <dd className="font-serif text-xl font-semibold text-stone-900 tabular-nums">
                           {m.averageGiven !== null ? m.averageGiven.toFixed(1) : '—'}
                         </dd>
                         <dt className="text-[11px] text-stone-500">avg score given</dt>
                       </div>
-                      <div className="rounded-lg bg-stone-50 px-2 py-2">
+                      <div className="rounded-2xl bg-stone-100 px-2 py-2">
                         <dd className="font-serif text-xl font-semibold text-stone-900 tabular-nums">
                           {m.averagePickRating !== null ? m.averagePickRating.toFixed(1) : '—'}
                         </dd>
@@ -633,7 +635,7 @@ export default async function StatsPage({
                         <td className="py-2.5 text-center">
                           <span
                             className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-bold tabular-nums ${
-                              r.firsts > 0 ? 'bg-amber-300 text-amber-950' : 'text-stone-300'
+                              r.firsts > 0 ? 'border-2 border-ink bg-sun text-ink' : 'text-stone-300'
                             }`}
                           >
                             {r.firsts}
@@ -642,7 +644,7 @@ export default async function StatsPage({
                         <td className="py-2.5 text-center">
                           <span
                             className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 font-bold tabular-nums ${
-                              r.lasts > 0 ? 'bg-rose-100 text-rose-800' : 'text-stone-300'
+                              r.lasts > 0 ? 'border-2 border-ink bg-rose-200 text-ink' : 'text-stone-300'
                             }`}
                           >
                             {r.lasts}
@@ -693,9 +695,9 @@ export default async function StatsPage({
                     className="grid grid-cols-[minmax(0,8rem)_1fr_1.5rem] items-center gap-3 text-sm"
                   >
                     <span className="truncate text-stone-700">{g.genre}</span>
-                    <span className="h-2.5 overflow-hidden rounded-full bg-stone-100">
+                    <span className="bar h-3">
                       <span
-                        className="grow-x block h-full rounded-full bg-stone-700"
+                        className="grow-x block h-full rounded-full bg-sky-300"
                         style={{
                           width: `${(g.count / maxGenreCount) * 100}%`,
                           animationDelay: `${i * 60}ms`,
@@ -751,7 +753,7 @@ export default async function StatsPage({
                 {quotesWithContext.map((quote) => (
                   <li
                     key={quote.id}
-                    className="card mb-4 break-inside-avoid border-l-4 border-l-amber-400 p-4"
+                    className="card mb-5 break-inside-avoid bg-amber-50 p-4"
                   >
                     <blockquote className="font-serif leading-relaxed text-stone-800 italic">
                       “{quote.quote_text}”

@@ -51,7 +51,7 @@ export default function RatingInput({
       <fieldset>
         <legend className="label">Your rating</legend>
         {didNotFinish ? (
-          <p className="rounded-lg bg-stone-100 px-3 py-2.5 text-sm text-stone-600">
+          <p className="panel px-3 py-2.5 text-sm text-stone-600">
             Marked as <span className="font-semibold text-stone-800">did not finish</span> — no
             score, and it won&apos;t count toward the book&apos;s average.
           </p>
@@ -84,14 +84,14 @@ export default function RatingInput({
                       }
                       setDirty(true)
                     }}
-                    className={`h-10 rounded-md text-sm font-semibold tabular-nums transition-colors ${
+                    className={`h-10 rounded-xl border-2 text-sm font-extrabold tabular-nums transition-colors ${
                       selected
-                        ? 'bg-stone-900 text-white'
+                        ? 'border-ink bg-ink text-white'
                         : filled
-                          ? 'bg-amber-200 text-amber-950 hover:bg-amber-300'
+                          ? 'border-ink bg-sun text-ink hover:bg-amber-400'
                           : halfFilled
-                            ? 'bg-linear-to-r from-amber-200 from-50% to-stone-100 to-50% text-stone-600'
-                            : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                            ? 'border-ink bg-linear-to-r from-sun from-50% to-white to-50% text-stone-600'
+                            : 'border-stone-300 bg-white text-stone-500 hover:border-ink hover:text-ink'
                     }`}
                   >
                     {n}
@@ -110,7 +110,7 @@ export default function RatingInput({
                 }}
                 className={`btn btn-sm ${
                   half && whole !== null && whole < 10
-                    ? 'bg-amber-200 text-amber-950 hover:bg-amber-300'
+                    ? 'bg-sun'
                     : 'btn-secondary'
                 }`}
               >

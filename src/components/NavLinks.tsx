@@ -16,7 +16,7 @@ export default function NavLinks() {
   return (
     <nav
       aria-label="Main"
-      className="order-3 -mx-1 flex w-full items-center gap-1 overflow-x-auto sm:order-none sm:mx-0 sm:w-auto"
+      className="order-3 no-scrollbar -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 pb-1 sm:order-none sm:mx-0 sm:w-auto"
     >
       {links.map((link) => {
         const isActive =
@@ -26,10 +26,10 @@ export default function NavLinks() {
             key={link.href}
             href={link.href}
             aria-current={isActive ? 'page' : undefined}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`rounded-full border-2 px-3 py-1 text-sm font-extrabold whitespace-nowrap transition-colors ${
               isActive
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-600 hover:bg-stone-200/70 hover:text-stone-900'
+                ? 'border-ink bg-sun text-ink shadow-[0_2px_0_0_var(--color-ink)]'
+                : 'border-transparent text-stone-600 hover:bg-stone-200/70 hover:text-ink'
             }`}
           >
             {link.label}

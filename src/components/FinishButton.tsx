@@ -50,7 +50,7 @@ export default function FinishButton({
         onClick={handleClick}
         className={`btn ${
           isFinished
-            ? 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+            ? 'bg-emerald-200 hover:bg-emerald-300'
             : 'btn-primary'
         }`}
       >

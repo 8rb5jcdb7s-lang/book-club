@@ -75,7 +75,7 @@ export default function CoverPicker({
                     onClick={() => onChange(option.url)}
                     title={option.label}
                     aria-pressed={selected}
-                    className={`block w-full overflow-hidden rounded-md bg-stone-100 transition-shadow ${
+                    className={`block w-full overflow-hidden rounded-xl bg-stone-100 transition-shadow ${
                       selected
                         ? 'ring-3 ring-amber-500'
                         : 'ring-1 ring-stone-300 hover:ring-2 hover:ring-stone-500'

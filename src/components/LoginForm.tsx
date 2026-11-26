@@ -38,12 +38,12 @@ export default function LoginForm({ initialError }: { initialError?: string }) {
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-2xl bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
       )}
       {state?.message && (
-        <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p role="status" className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {state.message}
         </p>
       )}

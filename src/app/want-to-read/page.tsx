@@ -66,7 +66,6 @@ export default async function WantToReadPage() {
                 coverUrl={book.cover_url}
                 title={book.title}
                 author={book.author}
-                synopsis={book.synopsis}
                 className="aspect-[2/3] w-full"
               />
               <div className="mt-3 flex flex-1 flex-col">

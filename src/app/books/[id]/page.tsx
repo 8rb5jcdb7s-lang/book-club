@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/dates'
 import { daysTaken, daysToFinish, historicalPace } from '@/lib/pace'
+import { amazonUrl, goodreadsUrl } from '@/lib/bookLinks'
 import { pickQueue } from '@/lib/picks'
 import BookCover from '@/components/BookCover'
 import NotesList from '@/components/NotesList'
@@ -16,9 +17,9 @@ import StartReadingButton from '@/components/StartReadingButton'
 export const metadata: Metadata = { title: 'Book' }
 
 const STATUS_LABELS = {
-  reading: { label: 'Reading now', className: 'bg-amber-100 text-amber-900' },
-  finished: { label: 'Finished', className: 'bg-emerald-100 text-emerald-900' },
-  queued: { label: 'Want to read', className: 'bg-stone-200 text-stone-700' },
+  reading: { label: 'Reading now', className: 'bg-amber-200' },
+  finished: { label: 'Finished', className: 'bg-emerald-200' },
+  queued: { label: 'Want to read', className: 'bg-stone-200' },
 } as const
 
 export default async function BookDetailPage({
@@ -87,14 +88,6 @@ export default async function BookDetailPage({
     : null
 
   const status = STATUS_LABELS[book.status as keyof typeof STATUS_LABELS]
-  const query = encodeURIComponent(`${book.title} ${book.author ?? ''}`.trim())
-  const goodreadsUrl = book.goodreads_id
-    ? `https://www.goodreads.com/book/show/${encodeURIComponent(book.goodreads_id)}`
-    : `https://www.goodreads.com/search?q=${query}`
-  const amazonUrl = book.amazon_asin
-    ? `https://www.amazon.com/dp/${encodeURIComponent(book.amazon_asin)}`
-    : `https://www.amazon.com/s?k=${query}&i=stripbooks`
-
   const facts: { label: string; value: React.ReactNode }[] = []
   if (book.page_count) facts.push({ label: 'Pages', value: book.page_count })
   if (book.genre) facts.push({ label: 'Genre', value: book.genre })
@@ -130,13 +123,13 @@ export default async function BookDetailPage({
           coverUrl={book.cover_url}
           title={book.title}
           author={book.author}
-          className="mx-auto aspect-[2/3] w-40 shrink-0 sm:mx-0 sm:w-44"
+          className="mx-auto aspect-[2/3] w-40 shrink-0 self-start sm:mx-0 sm:w-44"
         />
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <span
-                className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.className}`}
+                className={`chip ${status.className}`}
               >
                 {status.label}
               </span>
@@ -199,11 +192,21 @@ export default async function BookDetailPage({
             <Link href={`/books/${book.id}/edit`} className="btn btn-secondary">
               Edit
             </Link>
-            <a href={goodreadsUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
-              Goodreads ↗
+            <a
+              href={goodreadsUrl(book)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn bg-[#efe3cc] hover:bg-[#e6d6b8]"
+            >
+              Goodreads <span aria-hidden="true">↗</span>
             </a>
-            <a href={amazonUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
-              Amazon ↗
+            <a
+              href={amazonUrl(book)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn bg-orange-200 hover:bg-orange-300"
+            >
+              Amazon <span aria-hidden="true">↗</span>
             </a>
           </div>
         </div>

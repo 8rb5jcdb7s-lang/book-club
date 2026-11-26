@@ -24,9 +24,9 @@ export default function WordCountCard({ totalWords, year }: { totalWords: number
                 </span>
                 {ref.note && <span className="text-xs text-stone-400">{ref.note}</span>}
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
+              <div className="bar mt-1 h-3">
                 <div
-                  className={`h-full rounded-full ${fraction >= 1 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  className={`h-full rounded-full ${fraction >= 1 ? 'bg-emerald-400' : 'bg-amber-400'}`}
                   style={{ width: `${Math.max(2, fraction * 100)}%` }}
                 />
               </div>

@@ -27,7 +27,7 @@ export default function QuoteList({
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {quotes.map((q) => (
-            <li key={q.id} className="card border-l-4 border-l-amber-400 p-4">
+            <li key={q.id} className="card bg-amber-50 p-4">
               <blockquote className="font-serif leading-relaxed text-stone-800 italic">
                 “{q.quote_text}”
               </blockquote>

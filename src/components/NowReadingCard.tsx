@@ -117,7 +117,6 @@ export default function NowReadingCard({
         coverUrl={book.cover_url}
         title={book.title}
         author={book.author}
-        synopsis={book.synopsis}
         className="mx-auto aspect-[2/3] w-36 shrink-0 self-start sm:mx-0 sm:w-40"
       />
 
@@ -186,7 +185,7 @@ export default function NowReadingCard({
               </div>
             )}
             <div
-              className={`${flags.length > 0 ? '' : 'mt-2 '}h-2.5 overflow-hidden rounded-full bg-stone-200`}
+              className={`${flags.length > 0 ? '' : 'mt-2 '}bar`}
               role="progressbar"
               aria-valuenow={Math.round(schedule.fraction * 100)}
               aria-valuemin={0}
@@ -195,7 +194,7 @@ export default function NowReadingCard({
             >
               <div
                 className={`grow-x h-full rounded-full ${
-                  overdue && !everyoneDone ? 'bg-rose-500' : 'bg-amber-500'
+                  overdue && !everyoneDone ? 'bg-rose-400' : 'bg-amber-400'
                 }`}
                 style={{ width: `${Math.max(2, schedule.fraction * 100)}%` }}
               />
@@ -222,7 +221,7 @@ export default function NowReadingCard({
               ))}
             </div>
             {!everyoneDone && schedule.onPacePage !== null && book.page_count && (
-              <p className="mt-3 rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700">
+              <p className="panel mt-3 px-3 py-2 text-sm text-stone-700">
                 {overdue ? (
                   <>The plan was to be done by now — all {book.page_count} pages.</>
                 ) : (
@@ -246,7 +245,7 @@ export default function NowReadingCard({
             )}
           </div>
         ) : (
-          <p className="rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-700">
+          <p className="panel px-3 py-2 text-sm text-stone-700">
             {book.date_started
               ? `Started ${formatDate(book.date_started, { withYear: false })}. `
               : ''}
@@ -274,8 +273,8 @@ export default function NowReadingCard({
                 return (
                   <li key={f.user_id} className="flex items-center gap-2.5 text-sm">
                     <span
-                      className={`inline-flex h-6 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        PLACE_STYLES[i] ?? 'bg-stone-100 text-stone-600'
+                      className={`inline-flex h-7 w-10 shrink-0 items-center justify-center rounded-full border-2 border-ink text-xs font-extrabold ${
+                        PLACE_STYLES[i] ?? 'bg-white text-stone-700'
                       }`}
                     >
                       {ORDINALS[i] ?? `${i + 1}th`}
@@ -316,7 +315,7 @@ export default function NowReadingCard({
           )}
         </div>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-100 pt-4">
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t-2 border-dashed border-stone-200 pt-4">
           {currentUserId && <FinishButton bookId={book.id} isFinished={iFinished} />}
           {!iFinished && currentUserId && (
             <span className="text-xs text-stone-500">Emails everyone that you&apos;re done.</span>

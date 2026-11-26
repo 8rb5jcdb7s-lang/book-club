@@ -35,7 +35,7 @@ export default function StartReadingButton({
   }
 
   return (
-    <div className="w-full space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-2.5">
+    <div className="panel w-full space-y-2 p-2.5">
       <label className="block text-xs font-medium text-stone-600">
         Whose pick is this?
         <select

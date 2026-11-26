@@ -79,7 +79,7 @@ export default function PickTrackerCard({
           return (
             <li
               key={status.profile.id}
-              className="relative overflow-hidden rounded-xl px-3 py-2.5"
+              className="relative overflow-hidden rounded-2xl border-2 border-ink px-3 py-2.5"
               style={{ backgroundColor: colors.background }}
             >
               <div className="flex items-center gap-3">
@@ -123,7 +123,7 @@ export default function PickTrackerCard({
                   {status.daysSince === null ? 'Never' : describeDaysAgo(status.daysSince)}
                 </p>
               </div>
-              <div className="absolute inset-x-0 bottom-0 h-1 bg-white/60">
+              <div className="absolute inset-x-0 bottom-0 h-1.5 bg-white/60">
                 <div
                   className="grow-x h-full"
                   style={{ width: colors.width, backgroundColor: colors.bar }}
@@ -136,7 +136,7 @@ export default function PickTrackerCard({
 
 {recent.length > 0 && (
         <details
-          className="group mt-4 rounded-xl border border-stone-200"
+          className="group mt-4 rounded-2xl border-2 border-stone-200"
           // Only set when it should start open, so the browser (not React)
           // owns the open/closed state after that.
           {...(unassigned > 0 ? { open: true } : {})}

@@ -2,7 +2,7 @@
 function scoreColors(rating: number): { background: string; color: string } {
   const clamped = Math.max(1, Math.min(10, rating))
   const hue = ((clamped - 1) / 9) * 120 // 0 = red, 120 = green
-  return { background: `hsl(${hue}, 75%, 88%)`, color: `hsl(${hue}, 60%, 22%)` }
+  return { background: `hsl(${hue}, 80%, 80%)`, color: '#2b2520' }
 }
 
 export default function ScoreBadge({
@@ -26,7 +26,7 @@ export default function ScoreBadge({
   return (
     <span className="group/score relative inline-flex">
       <span
-        className={`inline-flex items-center justify-center rounded-full font-bold tabular-nums ${sizes[size]}`}
+        className={`inline-flex items-center justify-center rounded-full border-2 border-ink font-extrabold tabular-nums ${sizes[size]}`}
         style={scoreColors(rating)}
       >
         {/* Whole scores show as "7"; half points always keep their ".5". */}

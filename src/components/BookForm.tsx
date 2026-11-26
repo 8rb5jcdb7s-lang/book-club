@@ -201,9 +201,9 @@ export default function BookForm({
           {statusOptions.map((option) => (
             <label
               key={option.value}
-              className={`cursor-pointer rounded-lg border px-3 py-2 transition-colors ${
+              className={`cursor-pointer rounded-2xl border-2 px-3 py-2 transition-colors ${
                 status === option.value
-                  ? 'border-stone-900 bg-stone-900 text-white'
+                  ? 'border-ink bg-sun text-ink shadow-[0_3px_0_0_var(--color-ink)]'
                   : 'border-stone-300 bg-white text-stone-700 hover:border-stone-400'
               }`}
             >
@@ -215,10 +215,10 @@ export default function BookForm({
                 onChange={() => setStatus(option.value)}
                 className="sr-only"
               />
-              <span className="block text-sm font-semibold">{option.label}</span>
+              <span className="block text-sm font-extrabold">{option.label}</span>
               <span
                 className={`block text-xs ${
-                  status === option.value ? 'text-stone-300' : 'text-stone-500'
+                  status === option.value ? 'text-stone-700' : 'text-stone-500'
                 }`}
               >
                 {option.hint}
@@ -323,7 +323,7 @@ export default function BookForm({
         />
       </div>
 
-      <details className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm">
+      <details className="panel px-4 py-3 text-sm">
         <summary className="cursor-pointer font-medium text-stone-700">
           Cover image &amp; links
         </summary>

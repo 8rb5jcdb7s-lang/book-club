@@ -44,13 +44,13 @@ function Crown() {
       <path
         d="M5 27 L3 9 L15 18 L24 4 L33 18 L45 9 L43 27 Z"
         fill="#fbbf24"
-        stroke="#1c1917"
+        stroke="#2b2520"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />
-      <circle cx="3" cy="8" r="3" fill="#f87171" stroke="#1c1917" strokeWidth="2" />
-      <circle cx="24" cy="4" r="3" fill="#60a5fa" stroke="#1c1917" strokeWidth="2" />
-      <circle cx="45" cy="8" r="3" fill="#34d399" stroke="#1c1917" strokeWidth="2" />
+      <circle cx="3" cy="8" r="3" fill="#f87171" stroke="#2b2520" strokeWidth="2" />
+      <circle cx="24" cy="4" r="3" fill="#60a5fa" stroke="#2b2520" strokeWidth="2" />
+      <circle cx="45" cy="8" r="3" fill="#34d399" stroke="#2b2520" strokeWidth="2" />
     </svg>
   )
 }
@@ -61,7 +61,7 @@ function Sparkle({ className }: { className: string }) {
       <path
         d="M12 1 L14.500 9.500 L23 12 L14.500 14.500 L12 23 L9.500 14.500 L1 12 L9.500 9.500 Z"
         fill="#fbbf24"
-        stroke="#1c1917"
+        stroke="#2b2520"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
@@ -78,7 +78,7 @@ export default function PodiumCard({ entries }: { entries: PodiumEntry[] }) {
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="eyebrow">Hall of fame</p>
-          <h2 className="mt-0.5 text-xl font-semibold text-stone-900">Our top three</h2>
+          <h2 className="mt-0.5 text-xl font-semibold text-ink">Our top three</h2>
         </div>
         <Link href="/stats" className="btn btn-ghost btn-sm -mr-2">
           All stats
@@ -108,39 +108,34 @@ export default function PodiumCard({ entries }: { entries: PodiumEntry[] }) {
                       style={{ animationDelay: spot.delay }}
                     >
                       {spot.place === 1 && <Crown />}
-                      {/* The book: dark outline, a spine down the left, and
-                          page edges peeking out along the right and bottom. */}
                       <span
                         className={`relative mb-1.5 block w-[78%] max-w-24 transition-transform duration-200 group-hover:-translate-y-1.5 group-hover:rotate-0 ${spot.tilt}`}
                       >
-                        <span className="block overflow-hidden rounded-l-sm rounded-r-md border-2 border-stone-900 bg-stone-100 shadow-[3px_3px_0_#fafaf9,5px_5px_0_#1c1917]">
-                          <BookCover
-                            coverUrl={entry.book.cover_url}
-                            title={entry.book.title}
-                            author={entry.book.author}
-                            className="aspect-[2/3] w-full [&>div]:rounded-none [&>div]:shadow-none [&>div]:ring-0"
-                          />
-                          <span className="pointer-events-none absolute inset-y-0 left-0 w-[9%] border-r border-stone-900/30 bg-gradient-to-r from-black/35 to-black/5" />
-                        </span>
+                        <BookCover
+                          coverUrl={entry.book.cover_url}
+                          title={entry.book.title}
+                          author={entry.book.author}
+                          className="aspect-[2/3] w-full"
+                        />
                         <span
-                          className={`absolute -top-2.5 -right-2.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-stone-900 text-xs font-extrabold tabular-nums shadow-[2px_2px_0_#1c1917] ${spot.medal}`}
+                          className={`absolute -top-2.5 -right-2.5 flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink text-xs font-extrabold tabular-nums shadow-[0_2px_0_0_var(--color-ink)] ${spot.medal}`}
                         >
                           {entry.average.toFixed(1)}
                         </span>
                       </span>
                     </Link>
                   ) : (
-                    <span className="mb-1.5 flex aspect-[2/3] w-[78%] max-w-24 items-center justify-center rounded-md border-2 border-dashed border-stone-300 text-2xl text-stone-300">
+                    <span className="mb-1.5 flex aspect-[2/3] w-[78%] max-w-24 items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 text-2xl text-stone-300">
                       ?
                     </span>
                   )}
 
                   {/* The podium block */}
                   <span
-                    className={`relative flex w-full items-start justify-center rounded-t-lg border-2 border-b-0 border-stone-900 pt-1.5 ${spot.block}`}
+                    className={`relative flex w-full items-start justify-center rounded-t-lg border-2 border-b-0 border-ink pt-1.5 ${spot.block}`}
                   >
                     <span className={`absolute inset-x-0 top-0 h-2 rounded-t-md ${spot.blockShade} opacity-60`} />
-                    <span className="relative font-serif text-2xl font-bold text-stone-900">
+                    <span className="relative font-serif text-2xl font-bold text-ink">
                       {spot.place}
                     </span>
                   </span>
@@ -148,7 +143,7 @@ export default function PodiumCard({ entries }: { entries: PodiumEntry[] }) {
               )
             })}
           </ol>
-          <div className="h-2 rounded-b-md border-2 border-stone-900 bg-stone-800" />
+          <div className="h-2 rounded-b-md border-2 border-ink bg-ink" />
 
           <ol className="mt-3 grid grid-cols-3 gap-2 text-center">
             {PLACES.map((spot) => {
@@ -157,7 +152,7 @@ export default function PodiumCard({ entries }: { entries: PodiumEntry[] }) {
                 <li key={spot.place} className="min-w-0">
                   {entry ? (
                     <Link href={`/books/${entry.book.id}`} className="block hover:underline">
-                      <span className="line-clamp-2 font-serif text-sm leading-tight font-semibold text-stone-900">
+                      <span className="line-clamp-2 font-serif text-sm leading-tight font-semibold text-ink">
                         {entry.book.title}
                       </span>
                     </Link>

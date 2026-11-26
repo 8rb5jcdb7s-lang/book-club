@@ -19,7 +19,7 @@ export default async function Nav() {
     .single()
 
   return (
-    <header className="sticky top-0 z-30 border-b border-stone-200 bg-paper/90 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b-2 border-ink bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
           <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
@@ -41,7 +41,7 @@ export default async function Nav() {
         <div className="flex items-center gap-2 sm:ml-auto">
           <Link
             href="/profile"
-            className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200/70"
+            className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm font-bold text-stone-700 transition-colors hover:bg-stone-200/70"
             title="Your profile"
           >
             <Avatar
