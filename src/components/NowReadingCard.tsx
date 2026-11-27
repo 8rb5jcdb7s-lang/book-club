@@ -19,6 +19,8 @@ type Props = {
   finishers?: Finisher[]
   members?: Profile[]
   currentUserId?: string | null
+  /** The signed-in member's rating of this book, if they've already given one. */
+  myRating?: { rating: number | null; did_not_finish?: boolean | null } | null
   hasQueuedBooks?: boolean
 }
 
@@ -38,6 +40,7 @@ export default function NowReadingCard({
   finishers = [],
   members = [],
   currentUserId = null,
+  myRating = null,
   hasQueuedBooks = false,
 }: Props) {
   if (!book) {
@@ -67,6 +70,13 @@ export default function NowReadingCard({
   const finishedIds = new Set(finished.map((f) => f.user_id))
   const stillReading = members.filter((m) => !finishedIds.has(m.id))
   const iFinished = currentUserId !== null && finishedIds.has(currentUserId)
+  const rateHref = `/books/${book.id}#rate`
+  const myScore =
+    myRating?.rating != null
+      ? `${Number.isInteger(myRating.rating) ? myRating.rating : myRating.rating.toFixed(1)}/10`
+      : myRating?.did_not_finish
+        ? 'did not finish'
+        : null
   const everyoneDone = members.length > 0 && stillReading.length === 0
 
   // Flags on the timeline: where in the reading window each person finished.
@@ -113,12 +123,18 @@ export default function NowReadingCard({
 
   return (
     <div className="card flex flex-col gap-6 p-5 sm:flex-row sm:p-6">
-      <BookCover
-        coverUrl={book.cover_url}
-        title={book.title}
-        author={book.author}
-        className="mx-auto aspect-[2/3] w-36 shrink-0 self-start sm:mx-0 sm:w-40"
-      />
+      <Link
+        href={rateHref}
+        title="Open the book to rate it and jot down your thoughts"
+        className="mx-auto w-36 shrink-0 self-start transition-transform hover:-translate-y-0.5 sm:mx-0 sm:w-40"
+      >
+        <BookCover
+          coverUrl={book.cover_url}
+          title={book.title}
+          author={book.author}
+          className="aspect-[2/3] w-full"
+        />
+      </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-5">
         <div>
@@ -317,13 +333,25 @@ export default function NowReadingCard({
 
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t-2 border-dashed border-stone-200 pt-4">
           {currentUserId && <FinishButton bookId={book.id} isFinished={iFinished} />}
-          {!iFinished && currentUserId && (
+          {!iFinished && !myScore && currentUserId && (
             <span className="text-xs text-stone-500">Emails the whole club that you&apos;re done.</span>
+          )}
+          {currentUserId && myScore ? (
+            <Link href={rateHref} className="btn btn-secondary">
+              Your rating: {myScore}
+            </Link>
+          ) : (
+            currentUserId &&
+            iFinished && (
+              <Link href={rateHref} className="btn btn-primary">
+                Rate &amp; review
+              </Link>
+            )
           )}
           <div className="flex items-center gap-2 sm:ml-auto">
             <ConfirmActionButton
               action={finishBook.bind(null, book.id)}
-              confirmMessage={`Wrap up "${book.title}" and move it to History? You can rate it on the next screen.`}
+              confirmMessage={`Wrap up "${book.title}" and move it to History? Ratings and notes already given carry over.`}
               className="btn btn-secondary"
             >
               Wrap up book

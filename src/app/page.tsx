@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       .select('id, title, author, cover_url')
       .eq('status', 'queued')
       .order('created_at', { ascending: false }),
-    supabase.from('ratings_notes').select('book_id, rating'),
+    supabase.from('ratings_notes').select('book_id, user_id, rating, did_not_finish'),
     supabase.auth.getUser(),
   ])
 
@@ -49,6 +49,11 @@ export default async function DashboardPage() {
   }
 
   const queuedBooks = queued ?? []
+  // Members can rate the current book as soon as they've read it.
+  const myCurrentRating =
+    book && user
+      ? ((allRatings ?? []).find((r) => r.book_id === book.id && r.user_id === user.id) ?? null)
+      : null
   const podium = topRated(pickedBooks ?? [], allRatings ?? [])
 
   // Nudge: has this member rated the book the club finished most recently?
@@ -93,6 +98,7 @@ export default async function DashboardPage() {
           finishers={finishers}
           members={profiles ?? []}
           currentUserId={user?.id ?? null}
+          myRating={myCurrentRating}
           hasQueuedBooks={queuedBooks.length > 0}
         />
 <PickTrackerCard

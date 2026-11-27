@@ -88,6 +88,14 @@ export default async function BookDetailPage({
     ? rated.reduce((sum, rn) => sum + (rn.rating ?? 0), 0) / rated.length
     : null
 
+  // While the club is still reading, keep other people's written thoughts
+  // tucked away from anyone who hasn't finished (or given up on) the book.
+  const iAmDone =
+    (finishes ?? []).some((f) => f.user_id === user?.id) ||
+    myRating?.rating != null ||
+    Boolean(myRating?.did_not_finish)
+  const hideSpoilers = book.status === 'reading' && !iAmDone
+
   const status = STATUS_LABELS[book.status as keyof typeof STATUS_LABELS]
   const facts: { label: string; value: React.ReactNode }[] = []
   if (book.page_count) facts.push({ label: 'Pages', value: book.page_count })
@@ -250,8 +258,14 @@ export default async function BookDetailPage({
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <section>
+        <section id="rate" className="scroll-mt-24">
           <h2 className="section-title mb-3">Your rating &amp; notes</h2>
+          {book.status === 'reading' && (
+            <p className="mb-3 text-sm text-stone-600">
+              Finished early? Rate it and write your thoughts while it&apos;s fresh. Everything
+              stays with the book when it moves to History, and you can change it any time.
+            </p>
+          )}
           <RatingInput
             bookId={book.id}
             initialRating={myRating?.rating ?? null}
@@ -261,7 +275,11 @@ export default async function BookDetailPage({
         </section>
         <section>
           <h2 className="section-title mb-3">What everyone thought</h2>
-          <NotesList ratingsNotes={notes} />
+          <NotesList
+            ratingsNotes={notes}
+            currentUserId={user?.id ?? null}
+            hideSpoilers={hideSpoilers}
+          />
         </section>
       </div>
 

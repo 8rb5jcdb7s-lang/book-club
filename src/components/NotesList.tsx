@@ -6,7 +6,16 @@ type Row = RatingNote & {
   profile?: { display_name: string; avatar_url?: string | null } | null
 }
 
-export default function NotesList({ ratingsNotes }: { ratingsNotes: Row[] }) {
+export default function NotesList({
+  ratingsNotes,
+  currentUserId = null,
+  hideSpoilers = false,
+}: {
+  ratingsNotes: Row[]
+  currentUserId?: string | null
+  /** Tuck other people's written thoughts away (the viewer is still reading). */
+  hideSpoilers?: boolean
+}) {
   if (ratingsNotes.length === 0) {
     return <p className="empty-state">No ratings or notes yet. Be the first!</p>
   }
@@ -28,11 +37,21 @@ export default function NotesList({ ratingsNotes }: { ratingsNotes: Row[] }) {
                 rn.rating !== null && <ScoreBadge rating={rn.rating} size="sm" decimals={0} />
               )}
             </div>
-            {rn.notes && (
-              <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-stone-700">
-                {rn.notes}
-              </p>
-            )}
+            {rn.notes &&
+              (hideSpoilers && rn.user_id !== currentUserId ? (
+                <details className="mt-3 text-sm">
+                  <summary className="cursor-pointer font-bold text-stone-500 select-none hover:text-ink">
+                    Thoughts hidden until you finish (tap to peek, may spoil)
+                  </summary>
+                  <p className="mt-2 leading-relaxed whitespace-pre-line text-stone-700">
+                    {rn.notes}
+                  </p>
+                </details>
+              ) : (
+                <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-stone-700">
+                  {rn.notes}
+                </p>
+              ))}
           </li>
         )
       })}
