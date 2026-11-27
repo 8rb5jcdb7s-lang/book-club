@@ -48,7 +48,13 @@ export default async function DashboardPage() {
     finishers = (data as unknown as Finisher[]) ?? []
   }
 
-  const queuedBooks = queued ?? []
+  // The home strip shows the most-wanted books first (newest breaks a tie).
+  const { data: votes } = await supabase.from('book_votes').select('book_id')
+  const voteCount = new Map<string, number>()
+  for (const v of votes ?? []) voteCount.set(v.book_id, (voteCount.get(v.book_id) ?? 0) + 1)
+  const queuedBooks = [...(queued ?? [])].sort(
+    (a, b) => (voteCount.get(b.id) ?? 0) - (voteCount.get(a.id) ?? 0)
+  )
   // Members can rate the current book as soon as they've read it.
   const myCurrentRating =
     book && user

@@ -4,6 +4,7 @@ import Avatar from '@/components/Avatar'
 import BookCover from '@/components/BookCover'
 import ConfirmActionButton from '@/components/ConfirmActionButton'
 import RandomPick from '@/components/RandomPick'
+import VoteButton from '@/components/VoteButton'
 import StartReadingButton from '@/components/StartReadingButton'
 import WantToReadAddForm from '@/components/WantToReadAddForm'
 import { deleteBook } from '@/lib/actions/books'
@@ -15,7 +16,15 @@ export const metadata: Metadata = { title: 'Want to Read' }
 export default async function WantToReadPage() {
   const supabase = await createClient()
 
-  const [{ data: books }, { data: profiles }, { data: pickedBooks }] = await Promise.all([
+  const [
+    { data: queuedBooks },
+    { data: profiles },
+    { data: pickedBooks },
+    { data: votes, error: votesError },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
     supabase
       .from('books')
       .select('*, picker:profiles!picked_by(display_name, avatar_url)')
@@ -26,9 +35,24 @@ export default async function WantToReadPage() {
       .from('books')
       .select('id, title, status, picked_by, date_started, date_finished, created_at')
       .in('status', ['reading', 'finished']),
+    supabase.from('book_votes').select('book_id, user_id'),
+    supabase.auth.getUser(),
   ])
 
+  // Voting needs the book_votes table (a one-time migration). Until it
+  // exists the list simply shows without thumbs.
+  const votingOn = !votesError
+  const votersOf = new Map<string, string[]>()
+  for (const vote of votes ?? []) {
+    votersOf.set(vote.book_id, [...(votersOf.get(vote.book_id) ?? []), vote.user_id])
+  }
+  // Most wanted first; the newest suggestion wins a tie.
+  const books = [...(queuedBooks ?? [])].sort(
+    (a, b) => (votersOf.get(b.id)?.length ?? 0) - (votersOf.get(a.id)?.length ?? 0)
+  )
+
   const members = profiles ?? []
+  const nameOf = new Map(members.map((m) => [m.id, m.display_name]))
   // Whoever has waited longest since their last pick is offered as the picker.
   const suggestedPickerId = pickQueue(pickedBooks ?? [], members)[0]?.profile.id ?? null
 
@@ -37,13 +61,14 @@ export default async function WantToReadPage() {
       <div>
         <h1 className="page-title">Want to Read</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Ideas for future picks. Anyone can add to the list.
+          Ideas for future picks. Anyone can add to the list
+          {votingOn ? ', and a thumbs-up moves a book towards the front.' : '.'}
         </p>
       </div>
 
       <WantToReadAddForm />
 
-      {books && books.length > 1 && (
+      {books.length > 1 && (
         <RandomPick
           books={books.map((book) => ({
             id: book.id,
@@ -54,7 +79,7 @@ export default async function WantToReadPage() {
         />
       )}
 
-      {!books || books.length === 0 ? (
+      {books.length === 0 ? (
         <p className="empty-state">
           The list is empty. Add the first book you&apos;d like the club to read.
         </p>
@@ -96,6 +121,15 @@ export default async function WantToReadPage() {
                   </p>
                 )}
                 <div className="mt-auto flex flex-wrap items-center gap-1 pt-3">
+                  {votingOn && (
+                    <VoteButton
+                      bookId={book.id}
+                      voted={Boolean(user && votersOf.get(book.id)?.includes(user.id))}
+                      voterNames={(votersOf.get(book.id) ?? []).map(
+                        (id) => nameOf.get(id) ?? 'Someone'
+                      )}
+                    />
+                  )}
 <StartReadingButton
                     bookId={book.id}
                     members={members}
