@@ -14,6 +14,8 @@ export type HistoryRow = {
   pace: number | null
   averageRating: number | null
   breakdown: { name: string; rating: number }[]
+  /** The signed-in member hasn't rated this book (or marked it "did not finish"). */
+  needsMyRating: boolean
 }
 
 const SORTS = {
@@ -69,19 +71,24 @@ function detailFor(row: HistoryRow, sort: SortKey): string {
 export default function BookHistory({ rows }: { rows: HistoryRow[] }) {
   const [sort, setSort] = useState<SortKey>('recent')
   const [query, setQuery] = useState('')
+  const [onlyUnrated, setOnlyUnrated] = useState(false)
+  const unratedCount = rows.filter((r) => r.needsMyRating).length
+  // Once the last one is rated the filter has nothing left to show.
+  const showUnrated = onlyUnrated && unratedCount > 0
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const pool = showUnrated ? rows.filter((r) => r.needsMyRating) : rows
     const filtered = q
-      ? rows.filter(
+      ? pool.filter(
           (r) =>
             r.book.title.toLowerCase().includes(q) ||
             (r.book.author ?? '').toLowerCase().includes(q) ||
             (r.book.picker?.display_name ?? '').toLowerCase().includes(q)
         )
-      : rows
+      : pool
     return sortRows(filtered, sort)
-  }, [rows, sort, query])
+  }, [rows, sort, query, showUnrated])
 
   return (
     <div className="space-y-5">
@@ -94,6 +101,16 @@ export default function BookHistory({ rows }: { rows: HistoryRow[] }) {
           aria-label="Search books"
           className="input max-w-xs"
         />
+        {unratedCount > 0 && (
+          <button
+            type="button"
+            aria-pressed={showUnrated}
+            onClick={() => setOnlyUnrated(!showUnrated)}
+            className={`btn btn-sm ${showUnrated ? 'bg-sun hover:bg-amber-400' : 'btn-secondary'}`}
+          >
+            {showUnrated ? 'Show all books' : `You haven’t rated ${unratedCount}`}
+          </button>
+        )}
         <label className="ml-auto flex items-center gap-2 text-sm text-stone-600">
           Sort by
           <select
@@ -111,11 +128,13 @@ export default function BookHistory({ rows }: { rows: HistoryRow[] }) {
       </div>
 
       {visible.length === 0 ? (
-        <p className="empty-state">No books match “{query}”.</p>
+        <p className="empty-state">
+          {query.trim() ? `No books match “${query}”.` : 'Nothing here.'}
+        </p>
       ) : (
         <ul className="grid grid-cols-3 gap-x-3 gap-y-7 sm:grid-cols-4 sm:gap-x-5 md:grid-cols-5 lg:grid-cols-6">
           {visible.map((row) => {
-            const { book, averageRating, breakdown } = row
+            const { book, averageRating, breakdown, needsMyRating } = row
             return (
               <li key={book.id}>
                 <Link
@@ -128,12 +147,16 @@ export default function BookHistory({ rows }: { rows: HistoryRow[] }) {
                     author={book.author}
                     className="aspect-[2/3] w-full"
                   />
-                  {averageRating !== null ? (
+                  {averageRating !== null && (
                     <span className="absolute -top-2.5 -right-2 rounded-full">
                       <ScoreBadge rating={averageRating} size="sm" breakdown={breakdown} />
                     </span>
-                  ) : (
-                    <span className="absolute -top-2.5 -right-2 chip bg-white px-2 text-[10px]">
+                  )}
+                  {needsMyRating && (
+                    <span
+                      title="You haven't rated this one yet"
+                      className="chip absolute -right-2 -bottom-2.5 bg-sun px-2 text-[10px] shadow-[0_2px_0_0_var(--color-ink)]"
+                    >
                       Rate it
                     </span>
                   )}

@@ -9,7 +9,13 @@ export const metadata: Metadata = { title: 'History' }
 export default async function BooksPage() {
   const supabase = await createClient()
 
-  const [{ data: books }, { data: ratingsNotes }] = await Promise.all([
+  const [
+    { data: books },
+    { data: ratingsNotes },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
     supabase
       .from('books')
       .select('*, picker:profiles!picked_by(display_name, avatar_url)')
@@ -18,7 +24,15 @@ export default async function BooksPage() {
     supabase
       .from('ratings_notes')
       .select('*, profile:profiles!user_id(display_name)'),
+    supabase.auth.getUser(),
   ])
+
+  // Books the signed-in member has settled: given a score or marked "did not finish".
+  const settledByMe = new Set(
+    (ratingsNotes ?? [])
+      .filter((rn) => rn.user_id === user?.id && (rn.rating !== null || rn.did_not_finish))
+      .map((rn) => rn.book_id)
+  )
 
   const breakdowns = new Map<string, { name: string; rating: number }[]>()
   for (const rn of ratingsNotes ?? []) {
@@ -41,6 +55,7 @@ export default async function BooksPage() {
         ? breakdown.reduce((sum, r) => sum + r.rating, 0) / breakdown.length
         : null,
       breakdown,
+      needsMyRating: Boolean(user) && !settledByMe.has(book.id),
     }
   })
 
